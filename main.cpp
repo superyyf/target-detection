@@ -1,39 +1,7 @@
 #if !defined(FORMAT) && !defined(FORMATFILE)
-// For PIXCI(R) SV2, SV3, SV4, SV5, SV5B, SV5L, SV6
-//#define FORMAT  "RS-170"	  // RS-170 on input 2
-//#define FORMAT  "NTSC"	  // NTSC on input 2
-//#define FORMAT  "NTSC/YC"	  // NSTC S-Video on input 1		(N/A on SV5A,SV5B)
-//#define FORMAT  "CCIR"	  // CCIR on input 2
-//#define FORMAT  "PAL"	  // PAL (B,D,G,H,I) on input 2
-//#define FORMAT  "PAL/YC"	  // PAL (B,D,G,H,I) S-Video on input 1 (N/A on SV5A,SV5B)
-//  #define FORMAT  "default"	  // NSTC S-Video on input 1
 
-				// For PIXCI(R) SV7
-//#define FORMAT  "RS-170"	  // RS-170
-//#define FORMAT  "NTSC"	  // NTSC
-//#define FORMAT  "CCIR"	  // CCIR
-//#define FORMAT  "PAL"	  // PAL
-//#define FORMAT  "default"	  // NSTC
-
-				// For PIXCI(R) SV8
-//#define FORMAT  "RS-170"	  // RS-170 on BNC 0
-//#define FORMAT  "NTSC"	  // NTSC on BNC 0
-//#define FORMAT  "NTSC/YC"	  // NSTC S-Video
-//#define FORMAT  "CCIR"	  // CCIR on BNC 0
-//#define FORMAT  "PAL"	  // PAL on BNC 0
-//#define FORMAT  "PAL/YC"	  // PAL (B,D,G,H,I) S-Video
-//#define FORMAT  "default"	  // NSTC on BNC 0
-
-				// For PIXCI(R) A, CL1, CL2, CL3SD, D, D24, D32,
-				// D2X, D3X, D3XE, E1, E1DB, E4, E4DB, E8, E8CAM, E8DB, e104x4,
-				// EB1, EB1-POCL, EB1mini, EC1, ECB1, ECB1-34, ECB2, EL1, EL1DB,
-				// ELS2, SI, SI1, SI2, SI4
-//#define FORMAT  "default"	  // as per board's intended camera
-
-					// For any PIXCI(R) frame grabber
 #define FORMATFILE	"/usr/local/xcap/data/ddd.fmt"	  // using format file saved by XCAP
 #endif
-
 
 /*
  *  2.1) Set number of expected PIXCI(R) image boards.
@@ -281,6 +249,9 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 	}
 }
 
+
+
+//---------------目标信息-------------------
 struct SendInfo {
         uint8_t flag1;
         uint8_t flag2;
@@ -292,14 +263,12 @@ struct SendInfo {
         uint8_t y1;          
 } __attribute__((packed));
 
+
+
+
 //-----------------------------UDP传输目标信息---------------------
 void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *data_pack)
 {
-/*
-	char *sendBuf;
-	sendBuf = (char*)malloc(11);//后加10字节用于传输时间、目标坐标及方位角
-	memset(sendBuf, 0, 11);
-*/
 
 	char flag1 = 0xAB;//start 1
 	char flag2 = 0x00;//标志位 有无检测到目标
@@ -308,61 +277,14 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *da
 		flag2 = 0x01;
 	}
 	unsigned size = sizeof(data_pack);
-/*
-	memcpy(sendBuf, &flag1, sizeof(char));
-	memcpy(sendBuf + 1, &flag2, sizeof(unsigned char));
-	memcpy(sendBuf + 2, &t_h, sizeof(unsigned char));
-	memcpy(sendBuf + 3, &t_min, sizeof(unsigned char));
-	memcpy(sendBuf + 4, &t_s, sizeof(unsigned char));
-	memcpy(sendBuf + 5, &t_ms, sizeof(unsigned short));
-	memcpy(sendBuf + 7, &x1, sizeof(unsigned short));
-	memcpy(sendBuf + 9, &y1, sizeof(unsigned short));
-*/
-
-	int set = sendto(sockClient, &data_pack, 12, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
-	/*    if( i%50 == 0)
-		{
-			usleep(0.001);
-		}*/
+	int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
 }
 
-//----------------------------------保存图片----------------------
-//static void *save_pic(void *data)
-//{
-//
-//	int frmNum = 0;
-//	char _path[255];
-//	char prefix[] = "/home/nvidia/Desktop/histeq_detect_udp/pic/";
-//	char postfix[] = ".png";
-//	int row = 512;
-//	int col = 640;
-//	Mat img2 = Mat(row, col, CV_8UC1);//图像img2：row*col大小  这里只是定义了img2图像的大小还没有传递图像的信息
-//	frmNum = ptr[512 * col + 0] * 1000 + ptr[512 * col + 1] * 10 + ptr[512 * col + 3];
-//	uchar *ptmp = NULL;
-//	for (i = 0; i < row; i++)
-//	{
-//		ptmp = img2.ptr<uchar>(i);//指针指向img2的第i行
-//		for (j = 0; j < col; j++)
-//		{
-//			ptmp[j] = ptr[i*col + j];
-//		}
-//	}
-//	memset(_path, '\0', sizeof(char) * 255);
-//	sprintf(_path, "%sframe_%010d%s", prefix, frmNum, postfix);
-//	vector<int> compression_params;
-//	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-//	compression_params.push_back(0);
-//	imwrite(_path, img2, compression_params);
-//}
 
 
-
+//-----------------保存图片---------------------------
 static void* save_pic(void *data)
 {
-	//info param = data;
-        // Param* param = data;
-	//Mat src = data->message;
-	//int frmNum = 0;
 	count_nums += 1;
         uchar *img_con;
         img_con = (uchar*)data;
@@ -373,7 +295,6 @@ static void* save_pic(void *data)
 	char postfix[] = ".png";
         time_t start, end;
         start = clock();
-	//frmNum++;
 	memset(_path, '\0', sizeof(char) * 255);
 	sprintf(_path, "%sframe_%010d%s", prefix, count_nums, postfix);
         for(int i =0; i<512;i++)
@@ -389,7 +310,6 @@ static void* save_pic(void *data)
 	if (count_nums >= 12000)
 	{
 		count_nums = 0;
-		//frmNum = 0;
 	}
         printf("保存帧号%d\n", count_nums);
 
@@ -397,20 +317,7 @@ static void* save_pic(void *data)
 		double endtime = (double)(end - start) / CLOCKS_PER_SEC;
 		printf("保存图像耗时线程 = %f\n", endtime);
                 pthread_detach(pthread_self());
-        //pthread_exit((void*)pt);
-      // break;
 }
-//void createThread(Mat img)
-// {
-//printf("11111111");
-	//info *param = (info*)malloc(sizeof(info));
-//        info *param
-	//param->message = img;
-	//pthread_t pt;
-//printf("22222222");
-	//pthread_create(&pt, NULL, &save_pic, (void*)param);
-//}
-//------------------------保存图片结束-----------------------------
 
 
 
@@ -433,7 +340,6 @@ int main(void)
 	printf("ydim           = %d\n", pxd_imageYdim());
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
-	//start = clock();
 	int num_upgrade = 0;
 
 	FILE *fp;
@@ -495,12 +401,7 @@ int main(void)
 	vector<Vec4i> hierarchy;
 	Mat element = getStructuringElement(0, Size(3, 3));
 
-	time_t start, end;
-	time_t start_total, end_total;
-        time_t start_p, end_p;
-        time_t start_100, end_100;
-       int num_100 = 0;
-	//  start = clock();
+        int num_100 = 0;
 
 	int frmNum = 0;
 	char _path[255];
@@ -508,20 +409,9 @@ int main(void)
 	char prefix[] = "/home/nvidia/Desktop/histeq_detect_udp/pic/";
 	char postfix[] = ".png";
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
-        start = clock();
 
-        double all_time = 0;
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-                
-                
-                start_100 = clock();
-		end = clock();
-		double endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("捕获图像时间 = %f\n", endtime);
-
-		start = clock();
-		start_total = clock();
 
 		printf("count_nums=%d\n", count_nums);
 		//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
@@ -593,44 +483,8 @@ int main(void)
 		//imshow("origin",src);
 		//imshow("histeq",dst_2);
 		//cvWaitKey(1);
-        start_p = clock();
-
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("直方图均衡化耗时 = %f\n", endtime);
-                start = clock();
-
-	end_p = clock();
-	double endtime_p = (double)(end_p - start_p) / CLOCKS_PER_SEC;
-	printf("time printf = %f\n", endtime_p);
-		//----------------------------------保存图像-------------------------
-
-  //      pthread_t pt;
 
 
-//	        pthread_t pt0,pt1,pt2,pt3,pt4;
-//     int pt_num = count_nums % 5 ;
-//        switch(pt_num)
-//        {
-  //           case 0: pthread_create(&pt0, NULL, &save_pic, (void*)img_con);
-    //         case 1: pthread_create(&pt0, NULL, &save_pic, (void*)img_con);
-      //       case 2: pthread_create(&pt0, NULL, &save_pic, (void*)img_con);
-        //     case 3: pthread_create(&pt0, NULL, &save_pic, (void*)img_con);
-        //     case 4: pthread_create(&pt0, NULL, &save_pic, (void*)img_con);
-      // }    
-             
-//   pthread_create(&pt, NULL, &save_pic, (void*)img_con);
-
-
-		printf("receiveandwritecount_nums=%d\n", count_nums);
-
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("保存图像耗时 = %f\n", endtime);
-
- start = clock();
-
-		//--------------------------------保存图像结束------------------------
 
 		//-------------------------------十字线叠加------------------------
 		for (int i = -25; i < 25; i++)
@@ -641,13 +495,9 @@ int main(void)
 		}
 		
 
-                end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("十字线叠加 = %f\n", endtime);
 
 		//cvWaitKey(1);
 		//src = cvLoadImage("lena.jpg", 1);
-start =clock();
 
 
 
@@ -678,11 +528,6 @@ printf("mouse_click = %d\n", mouse_click);
 //waitKey(1);
 //}
 		//		return 0;
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("显示图像= %f\n", endtime);
-
-                start = clock();
 
 //-----------------------------------------抠图----------------------------------------------
 		char num_mouse_on = 1;
@@ -709,10 +554,6 @@ printf("mouse_click = %d\n", mouse_click);
 					}
 				}
 			//imshow("img_windows", img_windows);
-                end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("抠图= %f\n", endtime);
-                start = clock();
                 
                 
 //----------------------------------------------目标检测部分--------开始-----------------------------------------
@@ -741,103 +582,7 @@ printf("mouse_click = %d\n", mouse_click);
 			                detect = 1;
 			        }
 			        
-/*
-				detect = 0;
-				absdiff(img_windows, imageBackground, imageFront);//与背景做差  
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("与背景做差= %f\n", endtime);
-
-                start = clock();
-
-//				threshold(imageFront, imageFront, 100, 255, CV_THRESH_BINARY);  //阈值分割 
-				threshold(imageFront, imageFront, 0, 255, CV_THRESH_OTSU);  //阈值分割  
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("阈值分割= %f\n", endtime);
-
-                start = clock();
-
-				morphologyEx(imageFront, imageFront, CV_MOP_OPEN, element); //消除孤立的点
-
-			//	imshow("image_med",image_med);
-			//	imshow("imageFront",imageFront);
-			//	cvWaitKey(1);
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("消除孤立的点= %f\n", endtime);
-
-                start = clock();
-
-				findContours(imageFront, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point());
-				Mat imageContours = Mat::zeros(img_windows.size(), CV_8UC1);
-				Mat Contours = Mat::zeros(img_windows.size(), CV_8UC1);  //绘制
-				for (int i = 0; i < contours.size(); i++)
-				{
-					//绘制轮廓
-					drawContours(imageContours, contours, i, Scalar(255), 1, 8, hierarchy);
-				}
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("绘制轮廓= %f\n", endtime);
-
-                start = clock();
-				//计算轮廓矩
-				vector<Moments> mu(contours.size());
-				for (int i = 0; i < contours.size(); i++)
-				{
-					mu[i] = moments(contours[i], false);
-				}
-		end = clock();
-		endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("计算轮廓矩= %f\n", endtime);
-
-                start = clock();
-				//计算轮廓的质心
-				vector<Point2f> mc(contours.size());
-
-				end = clock();
-				endtime = (double)(end - start) / CLOCKS_PER_SEC;
-				printf("计算轮廓质心时间 = %f\n", endtime);
-
-				start = clock();
-				for (int i = 0; i < contours.size(); i++)
-				{
-					double g_dConArea = fabs(contourArea(contours[i], true));//计算轮廓的面积
-					//cout << "【用轮廓面积计算函数计算出来的第" << i << "个轮廓的面积为：】" << g_dConArea << endl;
-					mc[i] = Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
-
-					if (g_dConArea > 8 && g_dConArea > area_max)
-					{
-						//printf("%.0f",mc[i].x);
-						//printf(",%.0f\n",mc[i].y);
-						area_max = g_dConArea;
-						x1 = mc[i].x;
-						y1 = mc[i].y;
-						detect = 1;
-
-						//float shuiping = (x1 - 320)*1.5 / 320;
-						//float fuyang = (y1 - 256)*1.2 / 256;
-
-					}
-				}
-				end = clock();
-				endtime = (double)(end - start) / CLOCKS_PER_SEC;
-				printf("计算轮廓面积 = %f\n", endtime);
-
-
-
-				//x1 = 128;
-				//y1 = 256;
-
-				printf("x1=%d\n", x1);
-				printf("目标面积=%d\n", area_max);
-				printf("yisi目标shumu=%d\n", contours.size());
-				//start = clock();
-*/
 			}
-                        start = clock();
-
 
                         x1 = x_offset + x1;
                         y1 = y_offset + y1;
@@ -847,9 +592,6 @@ printf("mouse_click = %d\n", mouse_click);
 
                         
 			Net_Send_new(sockClient, addrSrv, t_h, t_min, t_s, t_ms, x1, y1);
-			end = clock();
-			double endtime = (double)(end - start) / CLOCKS_PER_SEC;
-			printf("UDP传输时间= %f\n", endtime);
 
 			num_upgrade += 1;
 		        printf("更新 = %i\n", num_upgrade);
