@@ -261,6 +261,7 @@ struct SendInfo {
         uint8_t t_ms;
         uint8_t x1;
         uint8_t y1;          
+SendInfo(unsigned char a, unsigned char b,unsigned char c, unsigned char d, unsigned char e, unsigned char f) : t_h(a), t_min(b), t_s(c), t_ms(d), x1(e), x2(f) {}
 } __attribute__((packed));
 
 
@@ -589,43 +590,21 @@ printf("mouse_click = %d\n", mouse_click);
                         printf("x1 = %d\n", x1);
                         printf("y1 = %d\n", y1);
                         printf("area = %d\n", area_max);
-
-                        
-			Net_Send_new(sockClient, addrSrv, t_h, t_min, t_s, t_ms, x1, y1);
+			
+			sendinfos = SendInfo(t_h, t_min, t_s, t_ms, x1, y1);
+                       
+			Net_Send_new(sockClient, addrSrv, sendinfos);
 
 			num_upgrade += 1;
-		        printf("更新 = %i\n", num_upgrade);
-			printf("detect = %i\n", detect);
 
 
 			if (num_upgrade >= 50 && detect == 0)//有目标不更新------------------------yyf
 			{
 				Mat imageBackground = dst_2.clone();
 				num_upgrade = 0;
-				printf("背景更新 = %i\n", num_upgrade);
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
 				//printf("beijinggenxin = %i\n",count);
 
-
-
-			//printf("----------------------------------------------------------------");
-			printf("\n", endtime);
-			printf("\n", endtime);
-			printf("\n", endtime);
-
-         end_100 = clock();
-         endtime = (double)(end_100 -start_100) / CLOCKS_PER_SEC;
-         printf("当前帧检测时间%f\n\n",endtime);
-         all_time  += endtime;
-
-
-
-         double average_time = all_time/num_100;
- 	 printf("平均每帧时间 = %f\n", average_time);
-
-             printf("帧数%d\n", num_100);
-             printf("总时间%f\n\n",all_time);	
-             printf("-----------------------------------\n\n");
 
 //--------------------------------目标检测部分--------结束-------------------------------
       imshow("img_click",img);
@@ -635,10 +614,6 @@ printf("mouse_click = %d\n", mouse_click);
 		}
 
 
-			end_total = clock();
-			endtime = (double)(end_total - start_total) / CLOCKS_PER_SEC;
-			printf("当前帧帧总时间 = %f\n", endtime);
-                        printf("-----------------------------结束------------------\n\n");
 	
 	}
 		//&& detect ==0
