@@ -250,8 +250,11 @@ int main(void)
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
 //-------------------------------------接收时间----------------------//
+	int fd = serialport_inti();//初始化串口
+
+	unsigned char f_num = 100;
 	unsigned char t_h = 10;
-	unsigned char t_min = 15;
+	unsigned char t_m = 15;
 	unsigned char t_s = 56;
 	unsigned short t_ms = 125;
 //------------------------------------接收时间end-----------------------//
@@ -419,7 +422,8 @@ printf("mouse_click = %d\n", mouse_click);
 			unsigned short x1 = 0;//目标坐标
 			unsigned short y1 = 0;
 			int area_max = 0;//目标面积
-			
+		        double angle_h = 0;//水平角
+			double angle_v = 0;//俯仰角	
 
 
 			if (mouse_click == 2 && num_upgrade == 0) //背景初始化
@@ -434,10 +438,18 @@ printf("mouse_click = %d\n", mouse_click);
 			{
 			        vector<DetectInfo> detect_infos = detection(imageBackground, img_windows, AREA_THRESHOLD);//目标检测---------------------yyf
 			        if(detect_infos.size()){
-			                x1 = (unsigned short)detect_infos[0].x;
-			                y1 = (unsigned short)detect_infos[0].y;
+			                x1 = x_offset + (unsigned short)detect_infos[0].x;
+			                y1 = y_offset + (unsigned short)detect_infos[0].y;
 			                area_max = detect_infos[0].area;
+					angle_h = (x1 - 320) * 1.5 / 320;
+					angle_v = (y1 - 256) * 1.2 / 256;
 			                detect = 1;
+		                        printf("x1 = %d\n", x1);
+                 		        printf("y1 = %d\n", y1);
+                       		        printf("area = %d\n", area_max);
+                        		printf("angle_h = %d\n", angle_h);
+                        		printf("angle_v = %d\n", angle_v);
+
 			        }
 				else
 				{
@@ -446,13 +458,13 @@ printf("mouse_click = %d\n", mouse_click);
 			        
 			}
 
-                        x1 = x_offset + x1;
-                        y1 = y_offset + y1;
                         printf("x1 = %d\n", x1);
                         printf("y1 = %d\n", y1);
                         printf("area = %d\n", area_max);
+			printf("angle_h = %d\n", angle_h);
+			printf("angle_v = %d\n", angle_v);
 			
-			SendInfo sendinfos(t_h, t_min, t_s, t_ms, x1, y1);
+			SendInfo sendinfos(f_num, t_h, t_m, t_s, t_ms, x1, y1, angle_h, angle_v);
                        
 			Net_Send_new(sockClient, addrSrv, &sendinfos);
 
@@ -464,7 +476,6 @@ printf("mouse_click = %d\n", mouse_click);
 				Mat imageBackground = img_windows.clone();
 				num_upgrade = 0;
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
-				//printf("beijinggenxin = %i\n",count);
 
 
 //--------------------------------目标检测部分--------结束-------------------------------

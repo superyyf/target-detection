@@ -34,8 +34,6 @@ using namespace cv;
 struct DetectInfo {
     /* 质心(x,y) */
     double x,y;
-    /* 方位角 */
-    double r,c;
     /* 目标面积 */
     int area;
 
@@ -296,35 +294,37 @@ int serialport_inti()
 
 return fd;
  
-}
+}	
 
 /***********************************UDP网口通信**************/
 /************************************************************/
 /************************************************************/
 struct SendInfo {
-        uint8_t flag1;
+        uint8_t flag1 = 0xAB;
         uint8_t flag2;
+	uint8_t f_num;
         uint8_t t_h;
-        uint8_t t_min;
+        uint8_t t_m;
         uint8_t t_s;
         uint8_t t_ms;
         uint8_t x1; 
-        uint8_t y1;    
-SendInfo(unsigned char a, unsigned char b,unsigned char c, unsigned char d, unsigned char e, unsigned char f) : t_h(a), t_min(b), t_s(c), t_ms(d), x1(e), y1(f) {}
+        uint8_t y1;
+	uint8_t angle_h;
+	uint8_t angle_v;    
+SendInfo(unsigned char a, unsigned char b,unsigned char c, unsigned char d, unsigned char e, unsigned char f, unsigned char g, unsigned char h, unsigned char i) : f_num(a), t_h(b), t_m(c), t_s(d), t_ms(e), x1(f), y1(g), angle_h(h), angle_v(i) {}
 } __attribute__((packed));
 
 
 
 
 //-----------------------------UDP传输目标信息---------------------
-void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *data_pack)
+void Net_Send_new(int sockClient, struct sockaddr_in addrSrv,  SendInfo *data_pack)
 {
 
-        char flag1 = 0xAB;//start 1
-        char flag2 = 0x00;//标志位 有无检测到目标
+        data_pack->flag2 = 0x00;//标志位 有无检测到目标
         if (data_pack->x1 != 0)
         {
-                flag2 = 0x01;
+                data_pack->flag2 = 0x01;
         }
         unsigned size = sizeof(data_pack);
         int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
@@ -333,7 +333,8 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *da
 
 /**********************************保存图像****************************/
 /********************************************************************/
-//-----------------保存图片---------------------------
+//----------------保存图片---------------------------
+/*
  void* save_pic(void *data)
 {
         count_nums += 1;
@@ -369,6 +370,6 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *da
                 printf("保存图像耗时线程 = %f\n", endtime);
                 pthread_detach(pthread_self());
 }
-
+*/
 #endif /* ifndef MAIN_HPP */
 
