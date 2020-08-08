@@ -457,19 +457,8 @@ printf("mouse_click = %d\n", mouse_click);
 				}
 			        
 			}
-
-                        printf("x1 = %d\n", x1);
-                        printf("y1 = %d\n", y1);
-                        printf("area = %d\n", area_max);
-			printf("angle_h = %d\n", angle_h);
-			printf("angle_v = %d\n", angle_v);
 			
-			SendInfo sendinfos(f_num, t_h, t_m, t_s, t_ms, x1, y1, angle_h, angle_v);
-                       
-			Net_Send_new(sockClient, addrSrv, &sendinfos);
-
 			num_upgrade++;
-
 
 			if (num_upgrade >= 50 && detect == 0)//背景更新
 			{
@@ -478,7 +467,25 @@ printf("mouse_click = %d\n", mouse_click);
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
 
 
-//--------------------------------目标检测部分--------结束-------------------------------
+//--------------------------------数据传输---------------------------------------
+			char rcv_buf[7];
+			int len = UART0_Recv(fd, rcv_buf,sizeof(rcv_buf));    
+                        if(len > 0)    
+                        {    
+				f_num = rcv_buf[1];
+				t_h = rcv_buf[2];
+				t_m = rcv_buf[3];
+				t_s = rcv_buf[4];
+				t_ms = rcv_buf[5];
+                	}    
+                	else    
+                	{    
+                    		printf("cannot receive data\n");    
+                	}    
+
+  		        SendInfo sendinfos(f_num, t_h, t_m, t_s, t_ms, x1, y1, angle_h, angle_v);
+                        Net_Send_new(sockClient, addrSrv, &sendinfos);
+
       imshow("img_click",img);
       waitKey(1);
       //cv::destroyWindow("img_click");
@@ -488,6 +495,8 @@ printf("mouse_click = %d\n", mouse_click);
 
 	
 	}
+		//关闭串口
+		close(fd);
 		//关闭采集视频流
 		do_close();
 		//关闭网络套接字
