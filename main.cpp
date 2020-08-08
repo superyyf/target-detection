@@ -90,6 +90,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <vector>
 
 #include<sys/socket.h>
 #include<netinet/in.h>
@@ -183,51 +184,6 @@ char mouse_click = 0;//鼠标点击坐标次数
 char show_on = 0;
 const int AREA_THRESHOLD = 150;//面积阈值------------------------yyf
 
-//---------------------------目标信息----------------------------yyf
-struct DetectInfo {
-    /* 质心(x,y) */
-    double x,y;
-    /* 方位角 */
-    double r,c;
-    /* 目标面积 */
-    int area;
-
-    friend bool operator>(const DetectInfo &d1, const DetectInfo &d2) {
-        return d1.area > d2.area;
-    }
-};
-
-/* 目标检测函数--------------------------------------------------yyf
- * background: 背景图像
- * img: 待检测图像
- * area_threshold: 面积阈值
- * 输出目标信息数组
- */
- 
-vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
-    Mat imgFront,imglabel, stats, centroids;
-    Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-    absdiff(img, background, imgFront);
-    threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
-    morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
-    int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
-    vector<DetectInfo> detectinfos(count);
-    for(int i = 1; i != count; ++i){
-        auto &info = detectinfos[i];
-        info.area = stats.at<int>(i, CC_STAT_AREA);
-        info.x = centroids.at<double>(i, 0);
-        info.y = centroids.at<double>(i, 1);
-    }
-    sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
-    for (int i = 0; i < count; ++i) {
-        if (detectinfos[i].area < area_threshold) {
-            detectinfos.resize(i);
-            break;
-        }
-    }
-    return detectinfos;
-}
-
 
 //-----------------------------鼠标点击时间------------------------
 void on_mouse(int event, int x, int y, int flags, void* ustc)
@@ -251,35 +207,6 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 
 
-//---------------目标信息-------------------
-struct SendInfo {
-        uint8_t flag1;
-        uint8_t flag2;
-        uint8_t t_h;
-        uint8_t t_min;
-        uint8_t t_s;
-        uint8_t t_ms;
-        uint8_t x1;
-        uint8_t y1;          
-SendInfo(unsigned char a, unsigned char b,unsigned char c, unsigned char d, unsigned char e, unsigned char f) : t_h(a), t_min(b), t_s(c), t_ms(d), x1(e), x2(f) {}
-} __attribute__((packed));
-
-
-
-
-//-----------------------------UDP传输目标信息---------------------
-void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *data_pack)
-{
-
-	char flag1 = 0xAB;//start 1
-	char flag2 = 0x00;//标志位 有无检测到目标
-	if (x1 != 0)
-	{
-		flag2 = 0x01;
-	}
-	unsigned size = sizeof(data_pack);
-	int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
-}
 
 
 
@@ -591,9 +518,9 @@ printf("mouse_click = %d\n", mouse_click);
                         printf("y1 = %d\n", y1);
                         printf("area = %d\n", area_max);
 			
-			sendinfos = SendInfo(t_h, t_min, t_s, t_ms, x1, y1);
+			SendInfo sendinfos(t_h, t_min, t_s, t_ms, x1, y1);
                        
-			Net_Send_new(sockClient, addrSrv, sendinfos);
+			Net_Send_new(sockClient, addrSrv, &sendinfos);
 
 			num_upgrade += 1;
 
