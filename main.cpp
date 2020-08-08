@@ -101,6 +101,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
+#include "main.hpp"
 
 
 
@@ -502,7 +503,7 @@ printf("mouse_click = %d\n", mouse_click);
 			}
 			else
 			{
-			        auto detect_infos = detection(imageBackground, img_windows, AREA_THRESHOLD);//目标检测---------------------yyf
+			        vector<DetectInfo> detect_infos = detection(imageBackground, img_windows, AREA_THRESHOLD);//目标检测---------------------yyf
 			        if(detect_infos.size()){
 			                x1 = (unsigned short)detect_infos[0].x;
 			                y1 = (unsigned short)detect_infos[0].y;

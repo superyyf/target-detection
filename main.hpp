@@ -2,14 +2,28 @@
 #define MAIN_HPP
 
 #include<stdio.h>      /*标准输入输出定义*/    
- #include<stdlib.h>     /*标准函数库定义*/    
- #include<unistd.h>     /*Unix 标准函数定义*/    
- #include<sys/types.h>     
- #include<sys/stat.h>       
- #include<fcntl.h>      /*文件控制定义*/    
- #include<termios.h>    /*PPSIX 终端控制定义*/    
- #include<errno.h>      /*错误号定义*/    
- #include<string.h>
+#include<stdlib.h>     /*标准函数库定义*/    
+#include<unistd.h>     /*Unix 标准函数定义*/    
+#include<sys/types.h>     
+#include<sys/stat.h>       
+#include<fcntl.h>      /*文件控制定义*/    
+#include<termios.h>    /*PPSIX 终端控制定义*/    
+#include<errno.h>      /*错误号定义*/    
+#include<string.h>
+#include<vector>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include<opencv2/imgproc/imgproc_c.h>
+#include <cv.h>
+
+
+//宏定义    
+#define FALSE  -1    
+#define TRUE   0
+
+using namespace std;
+using namespace cv;
 
 /***********************************目标检测*************************/
 /********************************************************************/
@@ -44,10 +58,9 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
     int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
     vector<DetectInfo> detectinfos(count);
     for(int i = 1; i != count; ++i){
-        auto &info = detectinfos[i];
-        info.area = stats.at<int>(i, CC_STAT_AREA);
-        info.x = centroids.at<double>(i, 0);
-        info.y = centroids.at<double>(i, 1);
+        detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
+        detectinfos[i].x = centroids.at<double>(i, 0);
+        detectinfos[i].y = centroids.at<double>(i, 1);
     }
     sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
     for (int i = 0; i < count; ++i) {
@@ -288,7 +301,7 @@ return fd;
 /***********************************UDP网口通信**************/
 /************************************************************/
 /************************************************************/
-truct SendInfo {
+struct SendInfo {
         uint8_t flag1;
         uint8_t flag2;
         uint8_t t_h;
