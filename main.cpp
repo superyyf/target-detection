@@ -211,45 +211,6 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 
 
-//-----------------保存图片---------------------------
-static void* save_pic(void *data)
-{
-	count_nums += 1;
-        uchar *img_con;
-        img_con = (uchar*)data;
-        Mat src(512, 640, CV_8UC1); 
-	char _path[255];
-
-	char prefix[] = "/home/nvidia/Desktop/histeq_detect_udp/pic/";
-	char postfix[] = ".png";
-        time_t start, end;
-        start = clock();
-	memset(_path, '\0', sizeof(char) * 255);
-	sprintf(_path, "%sframe_%010d%s", prefix, count_nums, postfix);
-        for(int i =0; i<512;i++)
-           for(int j =0; j < 640;j++)
-              {
-                      src.at<uchar>(i, j) =img_con[i*640+j];
-              }
-	vector<int> compression_params;
-	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-	compression_params.push_back(0);
-        imwrite(_path, src,compression_params);//将8bits数据写入
-
-	if (count_nums >= 12000)
-	{
-		count_nums = 0;
-	}
-        printf("保存帧号%d\n", count_nums);
-
-		end = clock();
-		double endtime = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("保存图像耗时线程 = %f\n", endtime);
-                pthread_detach(pthread_self());
-}
-
-
-
 int main(void)
 {
 	//
@@ -269,10 +230,9 @@ int main(void)
 	printf("ydim           = %d\n", pxd_imageYdim());
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
-	int num_upgrade = 0;
 
-	FILE *fp;
-	fp = fopen("2.txt", "w");
+	int num_upgrade = 0;//背景更新标志位
+
 
 	//-----------------------网络通信包头信息与缓冲区的定义及初始化-----------------------//
 
@@ -317,28 +277,15 @@ int main(void)
 
 	//建立一个Mat类型的变量image
 	Mat imageFront(256, 320, CV_8UC1);   //存储buf区的前景图像
-	Mat image_med(AOI_YDIM, AOI_XDIM, CV_8UC1);//中值滤波之后图像
 
-	//将colorimage_buf1背景图像存到Mat矩阵中
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
-	Mat imageBackground(256, 320, CV_8UC1);
-	//进行16bits中值滤波
-	//medianBlur(imageBackground,imageBackground,3);
+	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 
-	//定义目标检测变量，轮廓，腐蚀核，目标检测
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-	Mat element = getStructuringElement(0, Size(3, 3));
 
         int num_100 = 0;
-
 	int frmNum = 0;
-	char _path[255];
 
-	char prefix[] = "/home/nvidia/Desktop/histeq_detect_udp/pic/";
-	char postfix[] = ".png";
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
-
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
 
@@ -409,10 +356,6 @@ int main(void)
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
 		Mat img = dst_2.clone();
-		//imshow("origin",src);
-		//imshow("histeq",dst_2);
-		//cvWaitKey(1);
-
 
 
 		//-------------------------------十字线叠加------------------------
@@ -425,11 +368,8 @@ int main(void)
 		
 
 
-		//cvWaitKey(1);
-		//src = cvLoadImage("lena.jpg", 1);
 
-
-
+//-------------------------------------鼠标交互---------------------------------------
 if(mouse_click == 0)
 {
        imshow("img", img);
@@ -445,21 +385,10 @@ if(mouse_click == 1)
   //    waitKey(1);     
 }
 printf("mouse_click = %d\n", mouse_click);
-//waitKey(1);
 
  
-//waitKey(1);
-//放在括号里面会导致图像不更新
-//imshow("img", img);
-//if(mouse_click==0)
-//{		
-//cvSetMouseCallback("img", on_mouse, 0);
-//waitKey(1);
-//}
-		//		return 0;
 
 //-----------------------------------------抠图----------------------------------------------
-		char num_mouse_on = 1;
 		if (img_x != 0 && img_y != 0)
 		{
                         num_100 ++;
@@ -493,11 +422,11 @@ printf("mouse_click = %d\n", mouse_click);
 			
 
 
-			if (num_mouse_on != mouse_on || num_upgrade == 0)
+			if (mouse_click == 2 && num_upgrade == 0) //背景初始化
 			{
 				Mat imageBackground = img_windows.clone();
-				num_mouse_on = mouse_on;
-				num_upgrade = 0;
+				mouse_click = 3;
+				num_upgrade++;
 				
                                 printf("--------------------------背景更新--------------------------------------\n");
 			}
@@ -510,6 +439,10 @@ printf("mouse_click = %d\n", mouse_click);
 			                area_max = detect_infos[0].area;
 			                detect = 1;
 			        }
+				else
+				{
+					detect = 0;
+				}
 			        
 			}
 
@@ -523,12 +456,12 @@ printf("mouse_click = %d\n", mouse_click);
                        
 			Net_Send_new(sockClient, addrSrv, &sendinfos);
 
-			num_upgrade += 1;
+			num_upgrade++;
 
 
-			if (num_upgrade >= 50 && detect == 0)//有目标不更新------------------------yyf
+			if (num_upgrade >= 50 && detect == 0)//背景更新
 			{
-				Mat imageBackground = dst_2.clone();
+				Mat imageBackground = img_windows.clone();
 				num_upgrade = 0;
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
 				//printf("beijinggenxin = %i\n",count);
@@ -544,9 +477,7 @@ printf("mouse_click = %d\n", mouse_click);
 
 	
 	}
-		//&& detect ==0
 		//关闭采集视频流
-		fclose(fp);
 		do_close();
 		//关闭网络套接字
 		close(sockClient);

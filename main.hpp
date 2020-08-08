@@ -331,5 +331,44 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv, const SendInfo *da
 }
 
 
+/**********************************保存图像****************************/
+/********************************************************************/
+//-----------------保存图片---------------------------
+ void* save_pic(void *data)
+{
+        count_nums += 1;
+        uchar *img_con;
+        img_con = (uchar*)data;
+        Mat src(512, 640, CV_8UC1); 
+        char _path[255];
+
+        char prefix[] = "/home/nvidia/Desktop/histeq_detect_udp/pic/";
+        char postfix[] = ".png";
+        time_t start, end;
+        start = clock();
+        memset(_path, '\0', sizeof(char) * 255);
+        sprintf(_path, "%sframe_%010d%s", prefix, count_nums, postfix);
+        for(int i =0; i<512;i++)
+           for(int j =0; j < 640;j++)
+              {
+                      src.at<uchar>(i, j) =img_con[i*640+j];
+              }   
+        vector<int> compression_params;
+        compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+        compression_params.push_back(0);
+        imwrite(_path, src,compression_params);//将8bits数据写入
+
+        if (count_nums >= 12000)
+        {
+                count_nums = 0;
+        }
+        printf("保存帧号%d\n", count_nums);
+
+                end = clock();
+                double endtime = (double)(end - start) / CLOCKS_PER_SEC;
+                printf("保存图像耗时线程 = %f\n", endtime);
+                pthread_detach(pthread_self());
+}
+
 #endif /* ifndef MAIN_HPP */
 
