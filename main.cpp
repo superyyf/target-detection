@@ -173,16 +173,11 @@ static void hello(void)
 #define SYSFS_GPIO_RST_VAL_H        "1"
 #define SYSFS_GPIO_RST_VAL_L        "0"
  //------------------------------全局变量--------------
-int io_pos_flag = 0;
-int count_nums = 0; //保存的图像序号
-int count_on = 0;
-int temp_count_nums = 0;
+//int count_nums = 0; //保存的图像序号
 int img_x = 0;  //鼠标点击坐标
 int img_y = 0; //
 char detect = 0;//检测到目标与否
-char mouse_on = 0;//鼠标点击坐标次数
 char mouse_click = 0;//鼠标点击坐标次数
-char show_on = 0;
 const int AREA_THRESHOLD = 150;//面积阈值------------------------yyf
 
 
@@ -199,7 +194,6 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 		sprintf(temp, "(%d,%d)", pt.x, pt.y);
 		img_x = pt.x;
 		img_y = pt.y;
-		mouse_on++;
                 mouse_click =1;
                 printf("img_x = %d\n", img_x);
                 printf("img_y = %d\n", img_y);
@@ -249,15 +243,9 @@ int main(void)
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
-//-------------------------------------接收时间----------------------//
+
 	int fd = serialport_inti();//初始化串口
 
-	unsigned char f_num = 100;
-	unsigned char t_h = 10;
-	unsigned char t_m = 15;
-	unsigned char t_s = 56;
-	unsigned short t_ms = 125;
-//------------------------------------接收时间end-----------------------//
 
 
 //-----------------------图像采集缓冲区以及AOI感兴趣区定义----------------------------//
@@ -285,14 +273,11 @@ int main(void)
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 
 
-        int num_100 = 0;
-	int frmNum = 0;
-
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
 
-		printf("count_nums=%d\n", count_nums);
+		//printf("count_nums=%d\n", count_nums);
 		//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
 
 		//pxd_readushort函数捕捉16bits数据到缓冲区，成功i>0,i<0失败，函数中止运行
@@ -394,9 +379,7 @@ printf("mouse_click = %d\n", mouse_click);
 //-----------------------------------------抠图----------------------------------------------
 		if (img_x != 0 && img_y != 0)
 		{
-                        num_100 ++;
                         
-
 			int x_offset = img_x - 160;
 			int y_offset = img_y - 128;
 			Mat img_windows(256, 320, CV_8UC1);
