@@ -272,13 +272,13 @@ int main(void)
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 	
-	clock_t start, end;
+	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send;
 
 
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-		start = clock();
+		start_all = clock();
 
 		//printf("count_nums=%d\n", count_nums);
 		//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
@@ -295,7 +295,8 @@ int main(void)
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
 		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
-
+		
+		start_imgpro = clock();
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 		int nr = src.rows;//512
 		int nc = src.cols;//640
@@ -453,7 +454,9 @@ printf("mouse_click = %d\n", mouse_click);
 				printf("---------------------------------背景更新----------------------------------\n");
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
 
-
+			end_imgpro = clock();
+			
+			start_rcv = clock();
 //--------------------------------数据传输---------------------------------------
 			char rcv_buf[10];
 			ReciveInfo *rcv_info;
@@ -468,9 +471,11 @@ printf("mouse_click = %d\n", mouse_click);
                 	{    
                     		printf("cannot receive data\n");    
                 	}    
-
+			
+			end_rcv = clock();
 			printf("Target : [%d, %d]\n", x1, y1);
-
+			
+			start_send = clock();
   		        SendInfo sendinfos;
 
 			sendinfos.f_num = rcv_info->f_num;
@@ -481,9 +486,13 @@ printf("mouse_click = %d\n", mouse_click);
 			sendinfos.y1 = y1;
 
                         Net_Send_new(sockClient, addrSrv, &sendinfos);
-			
-			end = clock();
-			printf("totle time = %f\n", double(end - start)/CLOCKS_PER_SEC);
+			end_send = clock();
+			end_all = clock();
+			printf("image process time = %f\n", double(end_imgpro - start_imgpro)/CLOCKS_PER_SEC);
+			printf("data receive time = %f\n", double(end_rcv - start_rcv)/CLOCKS_PER_SEC);
+			printf("data send time = %f\n", double(end_send - start_send)/CLOCKS_PER_SEC);
+			printf("totle time = %f\n", double(end_all - start_all)/CLOCKS_PER_SEC);
+			printf("\n=========================================================================\n")
       imshow("img_click",img);
       waitKey(1);
       //cv::destroyWindow("img_click");
