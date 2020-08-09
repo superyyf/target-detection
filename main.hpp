@@ -75,6 +75,16 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 /********************************串口通信**************************/
 /*****************************************************************/
 /******************************************************************/
+//串口数据结构体
+struct ReciveInfo {
+        uint8_t flag1;
+        uint8_t f_num;
+        uint8_t t_h;
+        uint8_t t_m;
+        uint8_t t_s;
+        uint16_t t_ms;
+ 	uint8_t flag2;    
+} __attribute__((packed));
 
 
 /*******************************************************************  
@@ -307,11 +317,9 @@ struct SendInfo {
         uint8_t t_m;
         uint8_t t_s;
         uint8_t t_ms;
-        uint8_t x1; 
-        uint8_t y1;
-	uint8_t angle_h;
-	uint8_t angle_v;    
-SendInfo(unsigned char a, unsigned char b,unsigned char c, unsigned char d, unsigned char e, unsigned char f, unsigned char g, unsigned char h, unsigned char i) : f_num(a), t_h(b), t_m(c), t_s(d), t_ms(e), x1(f), y1(g), angle_h(h), angle_v(i) {}
+        uint16_t x1; 
+        uint16_t y1;
+	uint8_t flag3 = 0xBB;    
 } __attribute__((packed));
 
 

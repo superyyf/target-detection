@@ -271,11 +271,14 @@ int main(void)
 
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
+	
+	clock_t start, end;
 
 
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
+		start = clock();
 
 		//printf("count_nums=%d\n", count_nums);
 		//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
@@ -405,8 +408,8 @@ printf("mouse_click = %d\n", mouse_click);
 			unsigned short x1 = 0;//目标坐标
 			unsigned short y1 = 0;
 			int area_max = 0;//目标面积
-		        double angle_h = 0;//水平角
-			double angle_v = 0;//俯仰角	
+		        //double angle_h = 0;//水平角
+			//double angle_v = 0;//俯仰角	
 
 
 			if (mouse_click == 2 && num_upgrade == 0) //背景初始化
@@ -415,7 +418,7 @@ printf("mouse_click = %d\n", mouse_click);
 				mouse_click = 3;
 				num_upgrade++;
 				
-                                printf("--------------------------背景更新--------------------------------------\n");
+                                printf("--------------------------背景初始化--------------------------------------\n");
 			}
 			else
 			{
@@ -424,14 +427,14 @@ printf("mouse_click = %d\n", mouse_click);
 			                x1 = x_offset + (unsigned short)detect_infos[0].x;
 			                y1 = y_offset + (unsigned short)detect_infos[0].y;
 			                area_max = detect_infos[0].area;
-					angle_h = (x1 - 320) * 1.5 / 320;
-					angle_v = (y1 - 256) * 1.2 / 256;
+					//angle_h = (x1 - 320) * 1.5 / 320;
+					//angle_v = (y1 - 256) * 1.2 / 256;
 			                detect = 1;
 		                        printf("x1 = %d\n", x1);
                  		        printf("y1 = %d\n", y1);
                        		        printf("area = %d\n", area_max);
-                        		printf("angle_h = %d\n", angle_h);
-                        		printf("angle_v = %d\n", angle_v);
+                        		//printf("angle_h = %d\n", angle_h);
+                        		//printf("angle_v = %d\n", angle_v);
 
 			        }
 				else
@@ -447,28 +450,40 @@ printf("mouse_click = %d\n", mouse_click);
 			{
 				Mat imageBackground = img_windows.clone();
 				num_upgrade = 0;
+				printf("---------------------------------背景更新----------------------------------\n");
 			}//背景更新 放在后面，预防出现刚好背景是有目标的那一帧
 
 
 //--------------------------------数据传输---------------------------------------
-			char rcv_buf[7];
-			int len = UART0_Recv(fd, rcv_buf,sizeof(rcv_buf));    
-                        if(len > 0)    
+			char rcv_buf[10];
+			ReciveInfo *rcv_info;
+			int len = UART0_Recv(fd, rcv_buf,sizeof(ReciveInfo));    
+                        if(len >= sizeof(ReciveInfo))    
                         {    
-				f_num = rcv_buf[1];
-				t_h = rcv_buf[2];
-				t_m = rcv_buf[3];
-				t_s = rcv_buf[4];
-				t_ms = rcv_buf[5];
+				rcv_info = reinterpret_cast<ReciveInfo *>(rcv_buf);
+				printf("FrameNum = %d    time = %d:%d:%d\n", rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
+
                 	}    
                 	else    
                 	{    
                     		printf("cannot receive data\n");    
                 	}    
 
-  		        SendInfo sendinfos(f_num, t_h, t_m, t_s, t_ms, x1, y1, angle_h, angle_v);
-                        Net_Send_new(sockClient, addrSrv, &sendinfos);
+			printf("Target : [%d, %d]\n", x1, y1);
 
+  		        SendInfo sendinfos;
+
+			sendinfos.f_num = rcv_info->f_num;
+			sendinfos.t_h = rcv_info->t_h;
+			sendinfos.t_m = rcv_info->t_m;
+			sendinfos.t_ms = rcv_info->t_ms;
+			sendinfos.x1 = x1;
+			sendinfos.y1 = y1;
+
+                        Net_Send_new(sockClient, addrSrv, &sendinfos);
+			
+			end = clock();
+			printf("totle time = %f\n", double(end - start)/CLOCKS_PER_SEC);
       imshow("img_click",img);
       waitKey(1);
       //cv::destroyWindow("img_click");
