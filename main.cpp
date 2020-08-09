@@ -272,7 +272,7 @@ int main(void)
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 	
-	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send, start_detect, end_detect;
+	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send, start_detect, end_detect, start_hq, end_hq;
 
 
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
@@ -297,6 +297,7 @@ int main(void)
 		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
 		
 		start_imgpro = clock();
+		start_hq = clock();
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 		int nr = src.rows;//512
 		int nc = src.cols;//640
@@ -348,6 +349,7 @@ int main(void)
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
 		Mat img = dst_2.clone();
+		end_hq = clock();
 
 
 		//-------------------------------十字线叠加------------------------
@@ -484,6 +486,7 @@ printf("mouse_click = %d\n", mouse_click);
                         Net_Send_new(sockClient, addrSrv, &sendinfos);
 			end_send = clock();
 			end_all = clock();
+			printf("image enhance time = %f\n", double(end_hq - start_hq)/CLOCKS_PER_SEC);
 			printf("detect time = %f\n", double(end_detect - start_detect)/CLOCKS_PER_SEC);
 			printf("image process time = %f\n", double(end_imgpro - start_imgpro)/CLOCKS_PER_SEC);
 			printf("data receive time = %f\n", double(end_rcv - start_rcv)/CLOCKS_PER_SEC);
