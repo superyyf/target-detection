@@ -272,7 +272,7 @@ int main(void)
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 	
-	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send;
+	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send, strat_detect, end_detect;
 
 
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
@@ -423,19 +423,15 @@ printf("mouse_click = %d\n", mouse_click);
 			}
 			else
 			{
+				start_detect = clock();
 			        vector<DetectInfo> detect_infos = detection(imageBackground, img_windows, AREA_THRESHOLD);//目标检测---------------------yyf
+				end_detect = clock();
+
 			        if(detect_infos.size()){
 			                x1 = x_offset + (unsigned short)detect_infos[0].x;
 			                y1 = y_offset + (unsigned short)detect_infos[0].y;
 			                area_max = detect_infos[0].area;
-					//angle_h = (x1 - 320) * 1.5 / 320;
-					//angle_v = (y1 - 256) * 1.2 / 256;
 			                detect = 1;
-		                        printf("x1 = %d\n", x1);
-                 		        printf("y1 = %d\n", y1);
-                       		        printf("area = %d\n", area_max);
-                        		//printf("angle_h = %d\n", angle_h);
-                        		//printf("angle_v = %d\n", angle_v);
 
 			        }
 				else
@@ -473,7 +469,7 @@ printf("mouse_click = %d\n", mouse_click);
                 	}    
 			
 			end_rcv = clock();
-			printf("Target : [%d, %d]\n", x1, y1);
+			printf("Target : [%d, %d]  area : %d\n", x1, y1, area_max);
 			
 			start_send = clock();
   		        SendInfo sendinfos;
@@ -488,6 +484,7 @@ printf("mouse_click = %d\n", mouse_click);
                         Net_Send_new(sockClient, addrSrv, &sendinfos);
 			end_send = clock();
 			end_all = clock();
+			printf("detect time = %f\n", double(end_detect - start_detect)/CLOCKS_PER_SEC);
 			printf("image process time = %f\n", double(end_imgpro - start_imgpro)/CLOCKS_PER_SEC);
 			printf("data receive time = %f\n", double(end_rcv - start_rcv)/CLOCKS_PER_SEC);
 			printf("data send time = %f\n", double(end_send - start_send)/CLOCKS_PER_SEC);
