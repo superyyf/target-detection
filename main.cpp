@@ -492,7 +492,7 @@ printf("mouse_click = %d\n", mouse_click);
 			printf("data receive time = %f\n", double(end_rcv - start_rcv)/CLOCKS_PER_SEC);
 			printf("data send time = %f\n", double(end_send - start_send)/CLOCKS_PER_SEC);
 			printf("totle time = %f\n", double(end_all - start_all)/CLOCKS_PER_SEC);
-			printf("\n=========================================================================\n")
+			printf("\n=========================================================================\n");
       imshow("img_click",img);
       waitKey(1);
       //cv::destroyWindow("img_click");
