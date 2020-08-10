@@ -102,8 +102,7 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include "main.hpp"
-
-
+#include "queue.hpp"
 
 #include<pthread.h>
 
@@ -112,6 +111,14 @@ using namespace std;
 
 
 
+struct ImageData {
+    Mat image;
+};
+
+struct TargetData{
+	unsigned short x;
+	unsigned short y;
+};
 
 static void user(char *mesg)
 {
@@ -202,75 +209,85 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 
 
-Mat img_enhance(){
-
-		//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
-		//pxd_readushort函数捕捉16bits数据到缓冲区，成功i>0,i<0失败，函数中止运行
-		//捕捉16bits图像到缓冲区colorimage_buf1
-		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
-			if (i < 0)
-				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
-			else
-				printf("pxd_readuchar error: %d != %d\n", i, AOI_XDIM*AOI_YDIM * 3);
-			user("");
-			break;
-		}
-		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
-		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
+void *img_enhance_thread(Queue<ImageData> *q){
+	//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
+	//pxd_readushort函数捕捉16bits数据到缓冲区，成功i>0,i<0失败，函数中止运行
+	//捕捉16bits图像到缓冲区colorimage_buf1
+	if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
+		if (i < 0)
+			printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
+		else
+			printf("pxd_readuchar error: %d != %d\n", i, AOI_XDIM*AOI_YDIM * 3);
+		user("");
+		break;
+	}
+	//将colorimage_buf1中的16bits数据赋值给Mat矩阵
+	Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
 		
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
-		int nr = src.rows;//512
-		int nc = src.cols;//640
-		//像素总数
-		int total = nr * nc;
-		//转换后的目标矩阵，直方图均衡化结果
-		Mat dst_2(nr, nc, CV_8UC1);
-		//printf("total=%i\n",total);	
-		//获取原图像直方图
-		ushort *p_1 = NULL;
-		//存储直方图统计结果的数组
-		unsigned int hist[16384] = { 0 };
-		//扫描原图像
-		for (int i = 0; i < nr; i++)
+	int nr = src.rows;//512
+	int nc = src.cols;//640
+	//像素总数
+	int total = nr * nc;
+	//转换后的目标矩阵，直方图均衡化结果
+	Mat dst_2(nr, nc, CV_8UC1);
+	//printf("total=%i\n",total);	
+	//获取原图像直方图
+	ushort *p_1 = NULL;
+	//存储直方图统计结果的数组
+	unsigned int hist[16384] = { 0 };
+	//扫描原图像
+	for (int i = 0; i < nr; i++)
+	{
+		//获取第i行像素数组首指针
+		p_1 = src.ptr<ushort>(i);
+		for (int j = 0; j < nc; j++)
 		{
-			//获取第i行像素数组首指针
-			p_1 = src.ptr<ushort>(i);
-			for (int j = 0; j < nc; j++)
-			{
-				hist[p_1[j]] ++;
-			}
+			hist[p_1[j]] ++;
 		}
+	}
 
-		//计算灰度变换函数
-		//transf_fun存储均衡前像素值与均衡后像素值的映射关系
-		uchar transf_fun[16384] = { 0 };
-		transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
-		//累积
-		for (int i = 1; i < 16384; i++)
-		{
-			hist[i] = hist[i - 1] + hist[i];
-			transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
-		}
+	//计算灰度变换函数
+	//transf_fun存储均衡前像素值与均衡后像素值的映射关系
+	uchar transf_fun[16384] = { 0 };
+	transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
+	//累积
+	for (int i = 1; i < 16384; i++)
+	{
+		hist[i] = hist[i - 1] + hist[i];
+		transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
+	}
 
-		uchar * p_2 = NULL;
-                uchar img_con[512*640];
-		for (int i = 0; i < nr; i++)
+	uchar * p_2 = NULL;
+        uchar img_con[512*640];
+	for (int i = 0; i < nr; i++)
+	{
+		//获取第i行像素数组首指针
+		p_2 = dst_2.ptr<uchar>(i);
+		p_1 = src.ptr<ushort>(i);
+		//根据映射关系将原图像灰度替换成直方图均衡后的灰度
+		for (int j = 0; j < nc; j++)
 		{
-			//获取第i行像素数组首指针
-			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i);
-			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
-			for (int j = 0; j < nc; j++)
-			{
-				p_2[j] = transf_fun[p_1[j]];
-                                img_con[i*640+j] = transf_fun[p_1[j]];
-			}
+			p_2[j] = transf_fun[p_1[j]];
+                        img_con[i*640+j] = transf_fun[p_1[j]];
 		}
-		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
-		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		Mat img = dst_2.clone();
-		return img;
+	}
+	//将直方图均衡化结果dst_2复制给img，img进行网络传输。
+	//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
+		
+	ImageData imgdata;
+	imgdata.image = dst_2.clone();
+	q->push(move(imgdata));
+	return NULL;
 }
+
+
+void *imgae_process_thread(Queue<ImageData> *imgs, Queue<TargetData> *targets)
+{
+	ImageData;
+}
+
+
 
 int main(void)
 {
@@ -345,6 +362,7 @@ int main(void)
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
+	
 		start_all = clock();
                 start_imgpro = clock();
                 start_hq = clock();
@@ -355,17 +373,18 @@ int main(void)
 
 
 		//-------------------------------十字线叠加------------------------
-		for (int i = -25; i < 25; i++)
+	/*	for (int i = -25; i < 25; i++)
 		{
 			img.at<uchar>(AOI_YDIM / 2 + i, AOI_XDIM / 2) = 255;
 			img.at<uchar>(AOI_YDIM / 2, AOI_XDIM / 2 + i) = 255;
 
 		}
-		
+	*/	
 
 
 
 //-------------------------------------鼠标交互---------------------------------------
+/*
 if(mouse_click == 0)
 {
        imshow("img", img);
@@ -382,7 +401,7 @@ if(mouse_click == 1)
 }
 printf("mouse_click = %d\n", mouse_click);
 
- 
+*/ 
 
 //-----------------------------------------抠图----------------------------------------------
 		if (img_x != 0 && img_y != 0)
