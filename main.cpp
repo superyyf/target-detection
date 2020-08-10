@@ -348,10 +348,10 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("---------------------------------背景更新----------------------------------\n");
 		}
 		
-		TragetInfo targetinfo;
-		targetinfo.x1 = x1;
-		targetinfo.y1 = y1;
-		p1->output->push(targetinfo);
+		TragetData targetdata;
+		targetdata.x1 = x1;
+		targetdata.y1 = y1;
+		p1->output->push(targetdata);
 	}
 	return NULL;
 }
