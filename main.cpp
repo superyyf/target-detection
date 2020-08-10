@@ -322,7 +322,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		{
 			for (int j = 0; j < 320; j++)
 			{
-				img_windows.at<uchar>(i,j) = image_pro(128+i,160+j);
+				img_windows.at<uchar>(i,j) = image_pro.at<uchar>(128+i,160+j);
 			}
 		}	
 		
