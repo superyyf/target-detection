@@ -101,6 +101,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
+#include <memory>
 #include "main.hpp"
 #include "queue.hpp"
 
