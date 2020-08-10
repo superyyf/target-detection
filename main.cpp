@@ -276,7 +276,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
-		q->push(imgdata);
+		q->push(move(imgdata));
 		
 		if(FrameNum >= 100)
 		{
@@ -349,9 +349,9 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		}
 		
 		TargetData targetdata;
-		targetdata.x1 = x1;
-		targetdata.y1 = y1;
-		p1->output->push(targetdata);
+		targetdata.x = x1;
+		targetdata.y = y1;
+		p1->output->push(move(targetdata));
 	}
 	return NULL;
 }
@@ -375,7 +375,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
                     	printf("cannot receive data\n");    
                 }    
 		
-		r->push(*rcv_info);
+		r->push(move(*rcv_info));
 	}
 	close(fd);
 	return NULL;
