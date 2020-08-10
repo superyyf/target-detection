@@ -65,7 +65,7 @@ public:
             t = 0;
         --size;
         pthread_mutex_unlock(&lock);
-        return ret;
+        return std::unique_ptr<T>(ret);
     }
 
     void push(T &&data) {
