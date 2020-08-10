@@ -358,7 +358,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.y = y1;
 		p1->output->push(move(targetdata));
 	}
-	printf("\n------------------------------------------结束目标检测线程----------------------------------\n")
+	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
 }
 
