@@ -272,6 +272,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
+		imshow("Frame", dst_2);
+		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
@@ -284,6 +286,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 	
 	}
+	printf("\n------------------------------------结束图像增强线程-------------------------------\n")
 	q->end();
 	do_close();//关闭视频流
 	return NULL;
@@ -315,6 +318,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		if(update_flag == 0)
 		{
 			img_back = image_pro.clone();
+			printf("\n--------------------------------------背景初始化-----------------------------\n")
 			update_flag = 1;
 		}
 
@@ -334,6 +338,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		{
 			x1 = 128 + (unsigned short)detect_infos[0].x;
 			y1 = 160 + (unsigned short)detect_infos[0].y;
+			printf("Target : [ %d , %d ]", x1, x2);
 			detect = 1;
 		}
 		else
@@ -353,6 +358,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.y = y1;
 		p1->output->push(move(targetdata));
 	}
+	printf("\n------------------------------------------结束目标检测线程----------------------------------\n")
 	return NULL;
 }
 
@@ -377,6 +383,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 		
 		r->push(move(*rcv_info));
 	}
+	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n")
 	close(fd);
 	return NULL;
 }
@@ -418,8 +425,9 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		sendinfos.x1 = targetdata->x;
 		sendinfos.y1 = targetdata->y;
 		Net_Send_new(sockClient, addrSrv, &sendinfos);
+		printf("sending.......");
 	}
-	
+	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n")
 	close(sockClient);//关闭socket
 	return NULL;
 }
