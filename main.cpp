@@ -303,11 +303,11 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		imgdata = p1->input->pop();
 		if(imgdata == NULL)
 		{
-			targets->end();
+			p1->output->end();
 			break;
 		}
-		Mat image_pro = imgdata.image;
-		int frame_num = imgdata.frame_num;
+		Mat image_pro = imgdata->image;
+		int frame_num = imgdata->frame_num;
 		 
 		Mat img_back(256, 320, CV_8UC1);
 		//背景初始化
