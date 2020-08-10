@@ -442,8 +442,8 @@ int main(void)
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
 	Queue<ReceiveInfo> rcvinfos;
-	Pipe<ImageData*, TargetData*> p1 = Pipe(&imagedata, &targetdata);
-	Pipe<TargetData*, ReceiveInfo*> p2 = Pipe(&targetdata, &rcvinfos);
+	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
+	Pipe<TargetData, ReceiveInfo> p2(&targetdata, &rcvinfos);
 	
 	pthread_t t1, t2, t3, t4;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
