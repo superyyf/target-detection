@@ -276,7 +276,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
-		q->push(move(imgdata));
+		q->push(imgdata);
 		
 		if(FrameNum >= 100)
 		{
@@ -295,6 +295,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	int detect = 0;
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
+	int update_flag = 0;
 	while(true)
 	{
 
@@ -311,9 +312,10 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		 
 		Mat img_back(256, 320, CV_8UC1);
 		//背景初始化
-		if(frame_num == 1)
+		if(update_flag == 0)
 		{
 			img_back = image_pro.clone();
+			update_flag = 1;
 		}
 
 		//感兴趣区域
@@ -327,7 +329,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		}	
 		
 		//目标检测
-		vector<DetectInfo> detect_infos = detection(imageBackground, img_windows, AREA_THRESHOLD);
+		vector<DetectInfo> detect_infos = detection(img_back, img_windows, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
 			x1 = 128 + (unsigned short)detect_infos[0].x;
@@ -343,7 +345,6 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		if (frame_num % 50 == 0 && detect == 0)
 		{
 			img_back = img_windows.clone();
-			num_upgrade = 0;
 			printf("---------------------------------背景更新----------------------------------\n");
 		}
 		
