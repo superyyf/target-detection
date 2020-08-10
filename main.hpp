@@ -76,7 +76,7 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 /*****************************************************************/
 /******************************************************************/
 //串口数据结构体
-struct ReciveInfo {
+struct ReceiveInfo {
         uint8_t flag1;
         uint8_t f_num;
         uint8_t t_h;
