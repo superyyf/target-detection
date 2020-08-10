@@ -83,7 +83,6 @@ public:
         pthread_cond_destroy(&cond);
         while (size) {
             auto val = pop();
-            delete val;
         }
         delete buf;
     }
