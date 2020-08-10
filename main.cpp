@@ -289,7 +289,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 }
 
 
-void *image_process_thread(Queue<ImageData> *imgs, Queue<TargetData> *targets)
+void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
 	int detect = 0;
 	unsigned short x1 = 0;
@@ -297,8 +297,9 @@ void *image_process_thread(Queue<ImageData> *imgs, Queue<TargetData> *targets)
 	while(true)
 	{
 
+		
 		unique_ptr<ImageData> imgdata;
-		imgdata = imgs->pop();
+		imgdata = p1->input->pop();
 		if(imgdata == NULL)
 		{
 			targets->end();
@@ -348,7 +349,7 @@ void *image_process_thread(Queue<ImageData> *imgs, Queue<TargetData> *targets)
 		TragetInfo targetinfo;
 		targetinfo.x1 = x1;
 		targetinfo.y1 = y1;
-		targets->push(targetinfo);
+		p1->output->push(targetinfo);
 	}
 	return NULL;
 }
@@ -378,7 +379,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 	return NULL;
 }
 
-void *send_data_thread(Queue<ReceiveInfo> *r, Queue<TargetData> *t)
+void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 {
 			
 	//初始化套接字init socket 	
@@ -397,10 +398,10 @@ void *send_data_thread(Queue<ReceiveInfo> *r, Queue<TargetData> *t)
 	while(true)
 	{
 		unique_ptr<ReceiveInfo> rcvinfos;
-		rcvinfos = r.pop();
+		rcvinfos = p2->output->pop();
 		
 		unique_ptr<TargetData> targetdata;
-		targetdata = t.pop();
+		targetdata = p2->input->pop();
 		
 		if(rcvinfos == NULL || targetdata == NULL)
 		{
@@ -447,9 +448,9 @@ int main(void)
 	
 	pthread_t t1, t2, t3, t4;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
-	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, p1);
+	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
 	pthread_create(&t3, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
-	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, p2); 
+	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, &p2); 
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
