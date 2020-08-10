@@ -110,7 +110,7 @@
 using namespace cv;
 using namespace std;
 
-
+typedef void *(*THREAD_FUNC)(void *);
 
 struct ImageData {
 	Mat image;
@@ -348,7 +348,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("---------------------------------背景更新----------------------------------\n");
 		}
 		
-		TragetData targetdata;
+		TargetData targetdata;
 		targetdata.x1 = x1;
 		targetdata.y1 = y1;
 		p1->output->push(targetdata);
