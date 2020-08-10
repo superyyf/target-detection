@@ -2,6 +2,7 @@
 #define QUEUE_HPP 1
 
 #include <vector>
+#include <memory>
 #include <pthread.h>
 #include <assert.h>
 #include <string.h>
@@ -50,7 +51,7 @@ public:
         pthread_cond_init(&cond, NULL);
     }
 
-    T *pop() {
+    std::unique_ptr<T> pop() {
         pthread_mutex_lock(&lock);
         while (!size && !canceled)
             pthread_cond_wait(&cond, &lock);
