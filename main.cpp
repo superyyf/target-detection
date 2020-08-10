@@ -211,6 +211,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
+		clock_t start, end;
+		start = clock();
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -284,6 +286,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		{
 			FrameNum = 0;
 		}
+		end = clock();
+		printf("image enhance thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -302,7 +306,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	while(true)
 	{
 
-		
+		clock_t start, end;
+		start = clock();
 		unique_ptr<ImageData> imgdata;
 		imgdata = p1->input->pop();
 		if(imgdata == NULL)
@@ -357,6 +362,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.x = x1;
 		targetdata.y = y1;
 		p1->output->push(move(targetdata));
+		end = clock();
+		printf("image process thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
@@ -367,8 +374,10 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 	int fd = serialport_inti();//初始化串口
 	char rcv_buf[10];
 	ReceiveInfo *rcv_info;
+	clock_t start, end;
 	while(true)
-	{
+	{	
+		start = clock();
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
         	if(len >= sizeof(ReceiveInfo))    
         	{    
@@ -382,6 +391,8 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
                 }    
 		
 		r->push(move(*rcv_info));
+		end = clock();
+		printf("receive data thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
 	}
 	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n");
 	close(fd);
@@ -403,9 +414,10 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
-
+	clock_t start, end;
 	while(true)
-	{
+	{	
+		start = clock();
 		unique_ptr<ReceiveInfo> rcvinfos;
 		rcvinfos = p2->output->pop();
 		
@@ -425,7 +437,8 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		sendinfos.x1 = targetdata->x;
 		sendinfos.y1 = targetdata->y;
 		Net_Send_new(sockClient, addrSrv, &sendinfos);
-		printf("sending.......");
+		end = clock();
+		printf("send data thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n");
 	close(sockClient);//关闭socket
@@ -451,25 +464,16 @@ int main(void)
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 
 	Queue<ImageData> imagedata;
-	printf("-----------------------------------------------------------------------------------------------------\n");	
 	Queue<TargetData> targetdata;
-	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");	
 	Queue<ReceiveInfo> rcvinfos;
-	printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");	
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
-	printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");	
 	Pipe<TargetData, ReceiveInfo> p2(&targetdata, &rcvinfos);
-	printf("#####################################################################################################\n");	
+
 	pthread_t t1, t2, t3, t4;
-	printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");	
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
-	printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");	
 	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
-	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");	
 	pthread_create(&t3, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
-	printf("*****************************************************************************************************\n");	
 	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, &p2); 
-	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");	
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
