@@ -272,7 +272,7 @@ int main(void)
 	//Mat imageBackground(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);
 	Mat imageBackground(256, 320, CV_8UC1);  //背景图像
 	
-	clock_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send, start_detect, end_detect, start_hq, end_hq;
+	time_t start_all, end_all, start_imgpro, end_imgpro, start_rcv, end_rcv, start_send, end_send, start_detect, end_detect, start_hq, end_hq;
 
 
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
