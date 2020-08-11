@@ -225,7 +225,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
 		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
-		Mat src_win(src, Rect(160, 128, 320, 256));	
+		Mat src_win(src, Rect(160, 384, 320, 256));	
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 		int nr = src_win.rows;//256
 		int nc = src_win.cols;//320

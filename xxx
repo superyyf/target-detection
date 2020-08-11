@@ -1,0 +1,51 @@
+ 		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
+                Mat src_win(src, Rect(160, 128, 320, 256));    
+        //---------------------------16bits 图像直方图均衡化----------------------------------//
+                int nr = src_win.rows;//256
+                int nc = src_win.cols;//320
+                //像素总数
+                int total = nr * nc; 
+                //转换后的目标矩阵，直方图均衡化结果
+                Mat dst_2(nr, nc, CV_8UC1);
+                //printf("total=%i\n",total);   
+                //获取原图像直方图
+                ushort *p_1 = NULL;
+                //存储直方图统计结果的数组
+                unsigned int hist[16384] = { 0 };
+                //扫描原图像
+                for (int i = 0; i < nr; i++)
+                {
+                        //获取第i行像素数组首指针
+                        p_1 = src.ptr<ushort>(i);
+                        for (int j = 0; j < nc; j++)
+                        {
+                                hist[p_1[j]] ++; 
+                        }
+                }
+
+                //计算灰度变换函数
+                //transf_fun存储均衡前像素值与均衡后像素值的映射关系
+                uchar transf_fun[16384] = { 0 };
+                transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
+                //累积
+                for (int i = 1; i < 16384; i++)
+                {
+                        hist[i] = hist[i - 1] + hist[i];
+                        transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
+                }
+
+                uchar * p_2 = NULL;
+                //uchar img_con[512*640];
+                for (int i = 0; i < nr; i++)
+                {
+                        //获取第i行像素数组首指针
+                        p_2 = dst_2.ptr<uchar>(i);
+                        p_1 = src_win.ptr<ushort>(i);
+                        //根据映射关系将原图像灰度替换成直方图均衡后的灰度
+                        for (int j = 0; j < nc; j++)
+                        {
+                                p_2[j] = transf_fun[p_1[j]];
+                                //img_con[i*640+j] = transf_fun[p_1[j]];
+                        }
+                }    
+
