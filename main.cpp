@@ -192,7 +192,6 @@ const int AREA_THRESHOLD = 150;//面积阈值
 
 
 
-
 void *img_enhance_thread(Queue<ImageData> *q)
 {
 	
@@ -211,10 +210,11 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
+
+	clock_t start_1, end_1;
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-		clock_t start, end;
-		start = clock();
+		start_1 = clock();
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -288,8 +288,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		{
 			FrameNum = 0;
 		}
-		end = clock();
-		printf("image enhance thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
+		end_1 = clock();
+		printf("image enhance thread time = %fs\n", double(end_1 - start_1)/CLOCKS_PER_SEC);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -305,11 +305,11 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	int update_flag = 0;
+	clock_t start_2, end_2;
 	while(true)
 	{
 
-		clock_t start, end;
-		start = clock();
+		start_2 = clock();
 		unique_ptr<ImageData> imgdata;
 		imgdata = p1->input->pop();
 		if(imgdata == NULL)
@@ -337,15 +337,19 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		vector<DetectInfo> detect_infos = detection(img_back, img_windows, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
+
+			TargetData targetdata;
+			targetdata.x = x1;
+			targetdata.y = y1;
+			p1->output->push(move(targetdata));
+
 			x1 = 128 + (unsigned short)detect_infos[0].x;
 			y1 = 160 + (unsigned short)detect_infos[0].y;
-			printf("Target : [ %d , %d ]", x1, y1);
+			printf("Target : [ %d , %d ]\n", x1, y1);
 			detect = 1;
 		}
 		else
 		{
-			x1 = 0;
-			y1 = 0;
 			detect = 0;
 		}
 
@@ -356,12 +360,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("---------------------------------背景更新----------------------------------\n");
 		}
 		
-		TargetData targetdata;
-		targetdata.x = x1;
-		targetdata.y = y1;
-		p1->output->push(move(targetdata));
-		end = clock();
-		printf("image process thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
+		end_2 = clock();
+		printf("image process thread time = %fs\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
@@ -372,11 +372,12 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 	int fd = serialport_inti();//初始化串口
 	char rcv_buf[10];
 	ReceiveInfo *rcv_info;
-	clock_t start, end;
+	clock_t start_3, end_3;
 	while(true)
 	{	
-		start = clock();
+		start_3 = clock();
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
+		printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo))
         	if(len >= sizeof(ReceiveInfo))    
         	{    
 				
@@ -390,8 +391,8 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
                 }    
 		
 		r->push(move(*rcv_info));
-		end = clock();
-		printf("receive data thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
+		end_3 = clock();
+		printf("receive data thread time = %fs\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
 	}
 	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n");
 	close(fd);
@@ -413,21 +414,21 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
-	FILE *logfile = NULL;
-	logfile = fopen("log.txt","a");
-	clock_t start, end;
+	//FILE *logfile = NULL;
+	//logfile = fopen("log.txt","a");
+	clock_t start_4, end_4;
 	while(true)
 	{	
-		start = clock();
+		start_4 = clock();
 		unique_ptr<ReceiveInfo> rcvinfos;
 		rcvinfos = p2->output->pop();
 		
 		unique_ptr<TargetData> targetdata;
 		targetdata = p2->input->pop();
-		if(targetdata->x != 0)
-		{
+		//if(targetdata->x != 0)
+		//{
 			
-		}
+		//}
 		
 		if(rcvinfos == NULL || targetdata == NULL)
 		{
@@ -442,8 +443,8 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		sendinfos.x1 = targetdata->x;
 		sendinfos.y1 = targetdata->y;
 		Net_Send_new(sockClient, addrSrv, &sendinfos);
-		end = clock();
-		printf("send data thread time = %fs\n", double(end - start)/CLOCKS_PER_SEC);
+		end_4 = clock();
+		printf("send data thread time = %fs\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n");
 	close(sockClient);//关闭socket
