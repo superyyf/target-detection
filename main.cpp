@@ -320,24 +320,18 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		Mat image_pro = imgdata->image;
 		int frame_num = imgdata->frame_num;
 		 
+		//感兴趣区域
+		Mat img_windows(image_pro,Rect[160, 128, 320, 256]);
 		Mat img_back(256, 320, CV_8UC1);
+
 		//背景初始化
 		if(update_flag == 0)
 		{
-			img_back = image_pro.clone();
+			img_back = img_windows.clone();
 			printf("\n--------------------------------------背景初始化-----------------------------\n");
 			update_flag = 1;
 		}
 
-		//感兴趣区域
-		Mat img_windows(256, 320, CV_8UC1);
-		for (int i = 0; i < 256; i++)
-		{
-			for (int j = 0; j < 320; j++)
-			{
-				img_windows.at<uchar>(i,j) = image_pro.at<uchar>(128+i,160+j);
-			}
-		}	
 		
 		//目标检测
 		vector<DetectInfo> detect_infos = detection(img_back, img_windows, AREA_THRESHOLD);
