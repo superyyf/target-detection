@@ -309,9 +309,10 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	while(true)
 	{
 
-		start_2 = clock();
 		unique_ptr<ImageData> imgdata;
 		imgdata = p1->input->pop();
+
+		start_2 = clock();
 		if(imgdata == NULL)
 		{
 			p1->output->end();
@@ -419,10 +420,10 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 	clock_t start_4, end_4;
 	while(true)
 	{	
-		start_4 = clock();
 		unique_ptr<ReceiveInfo> rcvinfos;
 		rcvinfos = p2->output->pop();
 		
+		start_4 = clock();
 		unique_ptr<TargetData> targetdata;
 		targetdata = p2->input->pop();
 		//if(targetdata->x != 0)
