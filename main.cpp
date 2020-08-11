@@ -276,6 +276,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
+		imshow("Frame",dst_2);
+		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
@@ -283,7 +285,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		q->push(move(imgdata));
 		
 		end_1 = clock();
-		printf("image enhance thread time = %fs--------------------------\n\n", double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
+		printf("Image Enhance = %fs-------------------------------------------------------\n", double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -356,7 +358,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		}
 		
 		end_2 = clock();
-		printf("--------------------image process thread time = %fs\n\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
+		printf("--------------------Image Process = %fs-----------------------------------\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
@@ -387,7 +389,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 		
 		r->push(move(*rcv_info));
 		end_3 = clock();
-		printf("----------------------------------------------------------receive data thread time = %fs\n\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
+		printf("----------------------------------------Receive Data = %fs----------------\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
 	}
 	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n");
 	close(fd);
@@ -421,10 +423,6 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		targetdata = p2->input->pop();
 
 		start_4 = clock();
-		//if(targetdata->x != 0)
-		//{
-			
-		//}
 		
 		if(rcvinfos == NULL || targetdata == NULL)
 		{
@@ -440,7 +438,7 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		sendinfos.y1 = targetdata->y;
 		Net_Send_new(sockClient, addrSrv, &sendinfos);
 		end_4 = clock();
-		printf("----------------------------------------------------------------------send data thread time = %fs\n\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
+		printf("-----------------------------------------------------------Send Data = %fs\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n");
 	close(sockClient);//关闭socket
