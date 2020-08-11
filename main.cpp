@@ -377,7 +377,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 	{	
 		start_3 = clock();
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo))
+		printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo));
         	if(len >= sizeof(ReceiveInfo))    
         	{    
 				
