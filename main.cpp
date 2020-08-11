@@ -212,9 +212,9 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
 	clock_t start_1, end_1;
+	start_1 = clock();
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-		start_1 = clock();
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -282,12 +282,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 		
-		if(FrameNum >= 100)
-		{
-			FrameNum = 0;
-		}
 		end_1 = clock();
-		printf("image enhance thread time = %fs--------------------------\n\n", double(end_1 - start_1)/CLOCKS_PER_SEC);
+		printf("image enhance thread time = %fs--------------------------\n\n", double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -475,18 +471,16 @@ int main(void)
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
 	Pipe<TargetData, ReceiveInfo> p2(&targetdata, &rcvinfos);
 
-	pthread_t t1, t2, t3, t4, t5;
+	pthread_t t1, t2, t3, t4;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
-	pthread_create(&t2, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
-	pthread_create(&t3, NULL, (THREAD_FUNC)image_process_thread, &p1);
-	pthread_create(&t4, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
-	pthread_create(&t5, NULL, (THREAD_FUNC)send_data_thread, &p2); 
+	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
+	pthread_create(&t3, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
+	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, &p2); 
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
 	pthread_join(t3, NULL);
 	pthread_join(t4, NULL);
-	pthread_join(t5, NULL);
 	return 0;	
 }
 
