@@ -122,7 +122,7 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
     } 
 
 
-}
+
  
 //串口初始化
 int serialport_inti()
