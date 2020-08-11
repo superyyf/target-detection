@@ -225,10 +225,10 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
 		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
-		
+		Mat src_win(src, Rect(160, 128, 320, 256));	
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
-		int nr = src.rows;//512
-		int nc = src.cols;//640
+		int nr = src_win.rows;//256
+		int nc = src_win.cols;//320
 		//像素总数
 		int total = nr * nc;
 		//转换后的目标矩阵，直方图均衡化结果
@@ -261,17 +261,17 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 
 		uchar * p_2 = NULL;
-        	uchar img_con[512*640];
+        	//uchar img_con[512*640];
 		for (int i = 0; i < nr; i++)
 		{
 			//获取第i行像素数组首指针
 			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i);
+			p_1 = src_win.ptr<ushort>(i);
 			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
 			for (int j = 0; j < nc; j++)
 			{
 				p_2[j] = transf_fun[p_1[j]];
-                        	img_con[i*640+j] = transf_fun[p_1[j]];
+                        	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
