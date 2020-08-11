@@ -106,7 +106,7 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         FD_SET(fd,&fs_read);    
            
         time.tv_sec = 0;    
-        time.tv_usec = 15000;    
+        time.tv_usec = 1000;    
            
         //使用select实现串口的多路通信    
         fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);    
@@ -122,21 +122,6 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
     } 
 
 
-//串口数据分析
-void data_analysis(char* rcv_buf,int data_len)
-{
-	if(data_len != 7)
-	{
-		printf("data frame num error !");
-	}
-	
-	printf("帧头 ： %d \n",rcv_buf[0]);
-	printf("视频帧号 ： %d \n",rcv_buf[1]);
-	printf("时间-小时 ： %d \n",rcv_buf[2]);
-	printf("时间-分钟 ： %d \n",rcv_buf[3]);
-	printf("时间-秒 ： %d \n",rcv_buf[4]);
-	printf("时间-10毫秒 ： %d \n",rcv_buf[5]);
-	printf("校验位 ： %d \n",rcv_buf[6]);		
 }
  
 //串口初始化
