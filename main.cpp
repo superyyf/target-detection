@@ -277,7 +277,6 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
 		imshow("Frame", dst_2);
-		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
