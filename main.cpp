@@ -321,7 +321,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		int frame_num = imgdata->frame_num;
 		 
 		//感兴趣区域
-		Mat img_windows(image_pro,Rect[160, 128, 320, 256]);
+		Mat img_windows(image_pro, Rect(160, 128, 320, 256));
 		Mat img_back(256, 320, CV_8UC1);
 
 		//背景初始化
