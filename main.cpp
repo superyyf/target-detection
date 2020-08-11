@@ -475,16 +475,18 @@ int main(void)
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
 	Pipe<TargetData, ReceiveInfo> p2(&targetdata, &rcvinfos);
 
-	pthread_t t1, t2, t3, t4;
+	pthread_t t1, t2, t3, t4, t5;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
-	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
-	pthread_create(&t3, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
-	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, &p2); 
+	pthread_create(&t2, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
+	pthread_create(&t3, NULL, (THREAD_FUNC)image_process_thread, &p1);
+	pthread_create(&t4, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
+	pthread_create(&t5, NULL, (THREAD_FUNC)send_data_thread, &p2); 
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
 	pthread_join(t3, NULL);
 	pthread_join(t4, NULL);
+	pthread_join(t5, NULL);
 	return 0;	
 }
 
