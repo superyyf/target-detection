@@ -209,6 +209,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//pxd_readushort函数捕捉16bits数据到缓冲区，成功i>0,i<0失败，函数中止运行
 	//捕捉16bits图像到缓冲区colorimage_buf1
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
+	pxd_goLive(UNITSMAP, 1);
+	pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
 		clock_t start, end;
@@ -348,6 +350,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		}
 		else
 		{
+			x1 = 0;
+			y1 = 0;
 			detect = 0;
 		}
 
@@ -381,8 +385,9 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
         	if(len >= sizeof(ReceiveInfo))    
         	{    
+				
 			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-			printf("FrameNum = %d    time = %d:%d:%d\n", rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
+			printf("len = %d      FrameNum = %d    time = %d:%d:%d\n", len, rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
 
                 }    
                 else    
@@ -414,6 +419,8 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
+	FILE *logfile = NULL;
+	logfile = fopen("log.txt","a");
 	clock_t start, end;
 	while(true)
 	{	
@@ -423,6 +430,10 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		
 		unique_ptr<TargetData> targetdata;
 		targetdata = p2->input->pop();
+		if(targetdata->x != 0)
+		{
+			
+		}
 		
 		if(rcvinfos == NULL || targetdata == NULL)
 		{
