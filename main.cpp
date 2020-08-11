@@ -276,7 +276,6 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		imshow("Frame", dst_2);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
@@ -288,7 +287,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 			FrameNum = 0;
 		}
 		end_1 = clock();
-		printf("image enhance thread time = %fs\n", double(end_1 - start_1)/CLOCKS_PER_SEC);
+		printf("image enhance thread time = %fs--------------------------\n\n", double(end_1 - start_1)/CLOCKS_PER_SEC);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -345,7 +344,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 
 			x1 = 128 + (unsigned short)detect_infos[0].x;
 			y1 = 160 + (unsigned short)detect_infos[0].y;
-			printf("Target : [ %d , %d ]\n", x1, y1);
+			//printf("Target : [ %d , %d ]\n", x1, y1);
 			detect = 1;
 		}
 		else
@@ -361,7 +360,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		}
 		
 		end_2 = clock();
-		printf("image process thread time = %fs\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
+		printf("--------------------image process thread time = %fs\n\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
@@ -377,12 +376,12 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 	{	
 		start_3 = clock();
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo));
+		//printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo));
         	if(len >= sizeof(ReceiveInfo))    
         	{    
 				
 			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-			printf("len = %d      FrameNum = %d    time = %d:%d:%d\n", len, rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
+			//printf("len = %d      FrameNum = %d    time = %d:%d:%d\n", len, rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
 
                 }    
                 else    
@@ -392,7 +391,7 @@ void *receive_data_thread(Queue<ReceiveInfo> *r)
 		
 		r->push(move(*rcv_info));
 		end_3 = clock();
-		printf("receive data thread time = %fs\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
+		printf("----------------------------------------------------------receive data thread time = %fs\n\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
 	}
 	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n");
 	close(fd);
@@ -422,9 +421,10 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		unique_ptr<ReceiveInfo> rcvinfos;
 		rcvinfos = p2->output->pop();
 		
-		start_4 = clock();
 		unique_ptr<TargetData> targetdata;
 		targetdata = p2->input->pop();
+
+		start_4 = clock();
 		//if(targetdata->x != 0)
 		//{
 			
@@ -444,7 +444,7 @@ void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
 		sendinfos.y1 = targetdata->y;
 		Net_Send_new(sockClient, addrSrv, &sendinfos);
 		end_4 = clock();
-		printf("send data thread time = %fs\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
+		printf("----------------------------------------------------------------------send data thread time = %fs\n\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
 	}
 	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n");
 	close(sockClient);//关闭socket
