@@ -48,26 +48,29 @@ struct DetectInfo {
  * 输出目标信息数组
  */
 vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
-    Mat imgFront,imglabel, stats, centroids;
-    Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-    absdiff(img, background, imgFront);
-    threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
-    morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
-    int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
-    vector<DetectInfo> detectinfos(count);
-    for(int i = 1; i != count; ++i){
-        detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
-        detectinfos[i].x = centroids.at<double>(i, 0);
-        detectinfos[i].y = centroids.at<double>(i, 1);
-    }
-    sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
-    for (int i = 0; i < count; ++i) {
-        if (detectinfos[i].area < area_threshold) {
-            detectinfos.resize(i);
-            break;
-        }
-    }
-    return detectinfos;
+	Mat imgFront,imglabel, stats, centroids;
+	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	absdiff(img, background, imgFront);
+	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
+	imshow("img_bw", imgFront);
+	cvWaitKey(1);
+	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
+	imshow("img_open", imgFront);
+	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
+	vector<DetectInfo> detectinfos(count);
+	for(int i = 1; i != count; ++i){
+		detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
+		detectinfos[i].x = centroids.at<double>(i, 0);
+		detectinfos[i].y = centroids.at<double>(i, 1);
+	}
+	sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
+	for (int i = 0; i < count; ++i) {
+		if (detectinfos[i].area < area_threshold) {
+			detectinfos.resize(i);
+			break;
+		}
+	}
+	return detectinfos;
 }
 
 
