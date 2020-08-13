@@ -53,10 +53,8 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 	absdiff(img, background, imgFront);
 	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
 	imshow("img_bw", imgFront);
-	cvWaitKey(1);
 	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
 	imshow("img_open", imgFront);
-	cvWaitKey(1);
 	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
 	vector<DetectInfo> detectinfos(count);
 	for(int i = 1; i != count; ++i){
