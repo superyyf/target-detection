@@ -351,6 +351,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.frame_num = frame_num;
 		p1->output->push(move(targetdata));
 		//背景更新
+		printf("***********************************frame_num = %d**************************\n",frame_num);
 		if (frame_num % 50 == 0 && x1 == 0)
 		{
 			img_back = image_pro.clone();
