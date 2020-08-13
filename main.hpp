@@ -123,6 +123,38 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
 
 
 
+/********************************************************************  
+    * 名称：            UART0_Send  
+    * 功能：            发送数据  
+    * 入口参数：        fd           文件描述符      
+    *                   send_buf     存放串口发送数据  
+    *                   data_len     一帧数据的个数  
+    * 出口参数：        正确返回为1，错误返回为0  
+    *******************************************************************/    
+int UART0_Send(int fd, char *send_buf,int data_len)    
+{    
+	int len = 0;    
+           
+        len = write(fd, send_buf, data_len);    
+        if (len == data_len )    
+        {    
+            printf("send data is %s\n",send_buf);  
+            return len;    
+        }         
+        else       
+        {    
+                       
+            tcflush(fd,TCOFLUSH);    
+            return FALSE;    
+        }    
+           
+}    
+
+
+
+
+
+
  
 //串口初始化
 int serialport_inti()
