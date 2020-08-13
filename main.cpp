@@ -279,7 +279,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
 		imshow("Frame",dst_2);
-		cvWaitKey(1);
+		cvWaitKey(100);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
@@ -448,11 +448,6 @@ int main(void)
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
-
-	namedWindow("Frame");
-	namedWindow("img_bw");
-	namedWindow("img_open");
-	cvWaitKey(1);
 
 	pthread_t t1, t2, t3;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
