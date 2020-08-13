@@ -181,7 +181,7 @@ static void hello(void)
 #define AOI_Y 128
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
-#define AREA_THRESHOLD  150
+#define AREA_THRESHOLD  50
 
 
 #define SYSFS_GPIO_EXPORT           "/sys/class/gpio/export"  
@@ -308,6 +308,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	unsigned short y1 = 0;
 	bool update_flag = true;
 	clock_t start_2, end_2;
+	Mat img_back(256, 320, CV_8UC1);
 	while(true)
 	{
 
@@ -323,10 +324,6 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		Mat image_pro = imgdata->image;
 		int frame_num = imgdata->frame_num;
 		 
-		//感兴趣区域
-		//Mat img_windows(image_pro, Rect(160, 128, 320, 256));
-		Mat img_back(256, 320, CV_8UC1);
-
 		//背景初始化
 		if(update_flag)
 		{
