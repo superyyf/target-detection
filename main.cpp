@@ -449,6 +449,10 @@ int main(void)
 	Queue<TargetData> targetdata;
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
 
+	namedWindow("Frame");
+	namedWindow("img_bw");
+	namedWindow("img_open");
+
 	pthread_t t1, t2, t3;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
 	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
