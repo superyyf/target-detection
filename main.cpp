@@ -412,7 +412,7 @@ void *send_data_thread(Queue<TargetData> *t)
 			sendinfos.f_num = rcv_info->f_num;
 			sendinfos.t_h = rcv_info->t_h;
 			sendinfos.t_m = rcv_info->t_m;
-			sendinfos.t_ms = (targetdata->fram_num % 100) * 10;
+			sendinfos.t_ms = (targetdata->frame_num % 100) * 10;
 			sendinfos.x1 = targetdata->x;
 			sendinfos.y1 = targetdata->y;
 			Net_Send_new(sockClient, addrSrv, &sendinfos);
