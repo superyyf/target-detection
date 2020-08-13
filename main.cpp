@@ -255,7 +255,6 @@ void *img_enhance_thread(Queue<ImageData> *q)
 
 			//计算灰度变换函数
 			//transf_fun存储均衡前像素值与均衡后像素值的映射关系
-			uchar transf_fun[16384] = { 0 };
 			transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
 			//累积
 			for (int i = 1; i < 16384; i++)
