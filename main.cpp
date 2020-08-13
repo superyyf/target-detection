@@ -220,10 +220,11 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
-	clock_t start_1, end_1;
+	clock_t start_1, end_1, start_p;
 	start_1 = clock();
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
+		start_p = clock();
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != XDIM * YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -262,6 +263,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 				hist[i] = hist[i - 1] + hist[i];
 				transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
 			}
+			printf("**************************映射关系更新**********************\n")
 		}
 		
 		Mat dst_2(256, 320, CV_8UC1);
@@ -290,7 +292,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		q->push(move(imgdata));
 		
 		end_1 = clock();
-		printf("Image Enhance = %fs-------------------------------------------------------\n", double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
+		printf("Image Enhance = %fs / %fs-------------------------------------------------------\n", double(end_1 - start_p)/CLOCKS_PER_SEC, double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -354,11 +356,11 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.frame_num = frame_num;
 		p1->output->push(move(targetdata));
 		//背景更新
-		printf("***********************************frame_num = %d**************************\n",frame_num);
+		printf("************************frame_num = %d***********************\n",frame_num);
 		if (frame_num % 50 == 0 && x1 == 0)
 		{
 			img_back = image_pro.clone();
-			printf("---------------------------------背景更新----------------------------------\n");
+			printf("****************************背景更新************************\n");
 		}
 		
 		end_2 = clock();
