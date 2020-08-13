@@ -452,6 +452,7 @@ int main(void)
 	namedWindow("Frame");
 	namedWindow("img_bw");
 	namedWindow("img_open");
+	cvWaitKey(1);
 
 	pthread_t t1, t2, t3;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
