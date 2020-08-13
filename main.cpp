@@ -120,6 +120,7 @@ struct ImageData {
 struct TargetData{
 	unsigned short x;
 	unsigned short y;
+	int frame_num;
 };
 
 template<typename Input, typename Output> struct Pipe{
@@ -173,11 +174,14 @@ static void hello(void)
  *  as the compiled program is executed.
  *
  */
-#define AOI_XDIM 640 //width
-#define AOI_YDIM 512 //height
+#define XDIM 640 //width
+#define YDIM 512 //height
 #define COLORS 1
-
-#define BAOTOU 8
+#define AOI_X 160
+#define AOI_Y 128
+#define AOI_WIDTH 320
+#define AOI_HIGH 256
+#define AREA_THRESHOLD  150
 
 
 #define SYSFS_GPIO_EXPORT           "/sys/class/gpio/export"  
@@ -187,8 +191,6 @@ static void hello(void)
 #define SYSFS_GPIO_RST_VAL          "/sys/class/gpio/gpio388/value"
 #define SYSFS_GPIO_RST_VAL_H        "1"
 #define SYSFS_GPIO_RST_VAL_L        "0"
- //------------------------------全局变量--------------
-const int AREA_THRESHOLD = 150;//面积阈值
 
 
 
@@ -197,7 +199,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	
 
 	//定义存储16bits前景图像的缓冲区
-	static ushort   colorimage_buf1[AOI_YDIM*AOI_XDIM*COLORS];
+	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
 	//设置AOI感兴趣区域，一般不要修改
 	int     i = 0;
 	int     j = 0;
@@ -209,23 +211,23 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//捕捉16bits图像到缓冲区colorimage_buf1
 	//pxd_goneLive函数源源不断的捕获图像，手册有介绍
 	pxd_goLive(UNITSMAP, 1);
-	pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
+	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
 	clock_t start_1, end_1;
 	start_1 = clock();
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + AOI_XDIM, cy + AOI_YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != AOI_XDIM * AOI_YDIM*COLORS) {/*xiugai*/
+		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != XDIM * YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
 			else
-				printf("pxd_readuchar error: %d != %d\n", i, AOI_XDIM*AOI_YDIM * 3);
+				printf("pxd_readuchar error: %d != %d\n", i, XDIM*YDIM * 3);
 			user("");
 			break;
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
-		Mat src(AOI_YDIM, AOI_XDIM, CV_16UC1, colorimage_buf1);//原始图像
-		Mat src_win = src(Rect(160, 128, 320, 256));	
+		Mat src(YDIM, XDIM, CV_16UC1, colorimage_buf1);//原始图像
+		Mat src_win = src(Rect( AOI_X, AOI_Y, WIDTH, HIGH));	
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 		int nr = src_win.rows;//256
 		int nc = src_win.cols;//320
@@ -297,10 +299,9 @@ void *img_enhance_thread(Queue<ImageData> *q)
 
 void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
-	int detect = 0;
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
-	int update_flag = 0;
+	bool update_flag = true;
 	clock_t start_2, end_2;
 	while(true)
 	{
@@ -322,11 +323,11 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		Mat img_back(256, 320, CV_8UC1);
 
 		//背景初始化
-		if(update_flag == 0)
+		if(update_flag)
 		{
 			img_back = image_pro.clone();
 			printf("\n--------------------------------------背景初始化-----------------------------\n");
-			update_flag = 1;
+			update_flag = false;
 		}
 
 		
@@ -334,24 +335,23 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
-
-			TargetData targetdata;
-			targetdata.x = x1;
-			targetdata.y = y1;
-			p1->output->push(move(targetdata));
-
-			x1 = 128 + (unsigned short)detect_infos[0].x;
-			y1 = 160 + (unsigned short)detect_infos[0].y;
-			//printf("Target : [ %d , %d ]\n", x1, y1);
-			detect = 1;
+			x1 = AOI_X + (unsigned short)detect_infos[0].x;
+			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
+			printf("Target : [ %d , %d ]\n", x1, y1);
 		}
 		else
 		{
-			detect = 0;
+			x1 = 0;
+			y1 = 0;
 		}
-
+		
+		TargetData targetdata;
+		targetdata.x = x1;
+		targetdata.y = y1;
+		targetdata.frame_num = frame_num;
+		p1->output->push(move(targetdata));
 		//背景更新
-		if (frame_num % 50 == 0 && detect == 0)
+		if (frame_num % 50 == 0 && x1 == 0)
 		{
 			img_back = image_pro.clone();
 			printf("---------------------------------背景更新----------------------------------\n");
@@ -364,83 +364,64 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	return NULL;
 }
 
-void *receive_data_thread(Queue<ReceiveInfo> *r)
-{
-	int fd = serialport_inti();//初始化串口
-	char rcv_buf[10];
-	ReceiveInfo *rcv_info;
-	clock_t start_3, end_3;
-	while(true)
-	{	
-		start_3 = clock();
-		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		//printf("len = %d	sizeof(ReceiveInfo) = %d \n", len, sizeof(ReceiveInfo));
-        	if(len >= sizeof(ReceiveInfo))    
-        	{    
-				
-			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-			//printf("len = %d      FrameNum = %d    time = %d:%d:%d\n", len, rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
 
-                }    
-                else    
-                {    
-                    	printf("cannot receive data\n");    
-                }    
-		
-		r->push(move(*rcv_info));
-		end_3 = clock();
-		printf("----------------------------------------Receive Data = %fs----------------\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
-	}
-	printf("\n-----------------------------------结束串口接收线程---------------------------------------\n");
-	close(fd);
-	return NULL;
-}
-
-void *send_data_thread(Pipe<TargetData, ReceiveInfo> *p2)
+void *send_data_thread(Queue<TargetData> *t)
 {
 			
 	//初始化套接字init socket 	
-	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockClient == -1)
-	{
+	int fd = serialport_inti();//初始化串口
+	char rcv_buf[10];
+	ReceiveInfo *rcv_info;
+	
+	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
+	if (sockClient == -1){
 		printf("socket error!");
-		return 0;
+		return NULL;
 	}
 	struct sockaddr_in addrSrv;
 	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
-
-	//FILE *logfile = NULL;
-	//logfile = fopen("log.txt","a");
-	clock_t start_4, end_4;
-	while(true)
-	{	
-		unique_ptr<ReceiveInfo> rcvinfos;
-		rcvinfos = p2->output->pop();
+	clock_t start_3, end_3;	
+	while(true){
+		start_3 = clock();	
+		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
+        	if(len){    
+			if(len >= sizeof(ReceiveInfo)){
+	
+				rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
+				//printf("len = %d      FrameNum = %d    time = %d:%d:%d\n", len, rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_ms);
+			}
+			else{
+				printf("data is incomplete!\n");
+                	}    
+		}
+                else {    
+                    	printf("cannot receive data\n");    
+                }    
 		
 		unique_ptr<TargetData> targetdata;
-		targetdata = p2->input->pop();
-
-		start_4 = clock();
+		targetdata = t->pop();
 		
-		if(rcvinfos == NULL || targetdata == NULL)
-		{
+		if(targetdata == NULL){
 			break;
 		}
 
-		SendInfo sendinfos;
-		sendinfos.f_num = rcvinfos->f_num;
-		sendinfos.t_h = rcvinfos->t_h;
-		sendinfos.t_m = rcvinfos->t_m;
-		sendinfos.t_ms = rcvinfos->t_ms;
-		sendinfos.x1 = targetdata->x;
-		sendinfos.y1 = targetdata->y;
-		Net_Send_new(sockClient, addrSrv, &sendinfos);
-		end_4 = clock();
-		printf("-----------------------------------------------------------Send Data = %fs\n", double(end_4 - start_4)/CLOCKS_PER_SEC);
+		if(targetdata->x != 0){
+			SendInfo sendinfos;
+			sendinfos.f_num = rcvinfos->f_num;
+			sendinfos.t_h = rcvinfos->t_h;
+			sendinfos.t_m = rcvinfos->t_m;
+			sendinfos.t_ms = (rcvinfos->f_num % 100) * 10;
+			sendinfos.x1 = targetdata->x;
+			sendinfos.y1 = targetdata->y;
+			Net_Send_new(sockClient, addrSrv, &sendinfos);
+		}
+		end_3 = clock();
+		printf("----------------------------------------------Send Data = %fs\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
 	}
-	printf("\n------------------------------------------结束网口发送线程-----------------------------------------\n");
+	printf("\n------------------------------------------结束发送线程-----------------------------------------\n");
+	close(fd);
 	close(sockClient);//关闭socket
 	return NULL;
 }
@@ -465,20 +446,16 @@ int main(void)
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
-	Queue<ReceiveInfo> rcvinfos;
 	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
-	Pipe<TargetData, ReceiveInfo> p2(&targetdata, &rcvinfos);
 
-	pthread_t t1, t2, t3, t4;
+	pthread_t t1, t2, t3;
 	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
 	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
-	pthread_create(&t3, NULL, (THREAD_FUNC)receive_data_thread, &rcvinfos);
-	pthread_create(&t4, NULL, (THREAD_FUNC)send_data_thread, &p2); 
+	pthread_create(&t3, NULL, (THREAD_FUNC)send_data_thread, &targetdata); 
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
 	pthread_join(t3, NULL);
-	pthread_join(t4, NULL);
 	return 0;	
 }
 
