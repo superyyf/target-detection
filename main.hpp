@@ -52,9 +52,13 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	absdiff(img, background, imgFront);
 	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
-	imshow("img_bw", imgFront);
+	Mat img_bw = imgFront.clone();
+	imshow("img_bw", img_bw);
+	cvWaitKey(1);
 	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
-	imshow("img_open", imgFront);
+	Mat img_open = imgFront.clone();
+	imshow("img_open", img_open);
+	cvWaitKey(1);
 	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
 	vector<DetectInfo> detectinfos(count);
 	for(int i = 1; i != count; ++i){
