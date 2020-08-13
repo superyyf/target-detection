@@ -237,9 +237,9 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		//Mat src_win = src(Rect( AOI_X, AOI_Y, AOI_WIDTH, AOI_HIGH));	
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 
+		ushort *p_1 = NULL;
 		if (FrameNum % 50 == 0)//每50帧更新一次映射关系
 		{
-			ushort *p_1 = NULL;
 			//存储直方图统计结果的数组
 			unsigned int hist[16384] = { 0 };
 			//扫描原图像
