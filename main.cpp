@@ -227,7 +227,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
 		Mat src(YDIM, XDIM, CV_16UC1, colorimage_buf1);//原始图像
-		Mat src_win = src(Rect( AOI_X, AOI_Y, WIDTH, HIGH));	
+		Mat src_win = src(Rect( AOI_X, AOI_Y, AOI_WIDTH, AOI_HIGH));	
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 		int nr = src_win.rows;//256
 		int nc = src_win.cols;//320
@@ -409,10 +409,10 @@ void *send_data_thread(Queue<TargetData> *t)
 
 		if(targetdata->x != 0){
 			SendInfo sendinfos;
-			sendinfos.f_num = rcvinfos->f_num;
-			sendinfos.t_h = rcvinfos->t_h;
-			sendinfos.t_m = rcvinfos->t_m;
-			sendinfos.t_ms = (rcvinfos->f_num % 100) * 10;
+			sendinfos.f_num = rcv_info->f_num;
+			sendinfos.t_h = rcv_info->t_h;
+			sendinfos.t_m = rcv_info->t_m;
+			sendinfos.t_ms = (targetdata->fram_num % 100) * 10;
 			sendinfos.x1 = targetdata->x;
 			sendinfos.y1 = targetdata->y;
 			Net_Send_new(sockClient, addrSrv, &sendinfos);
