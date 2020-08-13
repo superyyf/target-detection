@@ -263,7 +263,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 				hist[i] = hist[i - 1] + hist[i];
 				transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
 			}
-			printf("**************************映射关系更新**********************\n")
+			printf("**************************映射关系更新**********************\n");
 		}
 		
 		Mat dst_2(256, 320, CV_8UC1);
