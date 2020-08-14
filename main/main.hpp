@@ -332,7 +332,7 @@ struct SendInfo {
         uint8_t t_h;
         uint8_t t_m;
         uint8_t t_s;
-        uint8_t t_ms;
+        uint16_t t_ms;
         uint16_t x1; 
         uint16_t y1;
 	uint8_t flag3 = 0xBB;    
@@ -350,7 +350,7 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv,  SendInfo *data_pa
         {
                 data_pack->flag2 = 0x01;
         }
-        unsigned size = sizeof(data_pack);
+        unsigned size = sizeof(*data_pack);
         int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
 }
 
