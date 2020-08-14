@@ -1,76 +1,68 @@
+#include <errno.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include<stdio.h>      /*标准输入输出定义*/
-#include<stdlib.h>     /*标准函数库定义*/
-#include<unistd.h>     /*Unix 标准函数定义*/
-#include<sys/types.h>
-#include<sys/stat.h>
-#include<fcntl.h>      /*文件控制定义*/
-#include<termios.h>    /*PPSIX 终端控制定义*/
-#include<errno.h>      /*错误号定义*/
-#include<string.h>
-#include<vector>
-#include<stdint.h>
-#include<netinet/in.h>
-#include<arpa/inet.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
 
 using namespace std;
-
-struct SendInfo {
-        uint8_t flag1 = 0xAB;
-        uint8_t flag2;
-        uint8_t f_num;
-        uint8_t t_h;
-        uint8_t t_m;
-        uint8_t t_s;
-        uint16_t t_ms;
-        uint16_t x1; 
-        uint16_t y1; 
-        uint8_t flag3 = 0xBB;    
-} __attribute__((packed));
+#define DEST_PORT	10011
+#define DSET_IP_ADDRESS  "192.168.1.11"
 
 
-
-
-//-----------------------------UDP传输目标信息---------------------
-void Net_Send_new(int sockClient, struct sockaddr_in addrSrv,  SendInfo *data_pack)
+int main()
 {
+  /* socket文件描述符 */
+  int sock_fd;
 
-        data_pack->flag2 = 0x00;//标志位 有无检测到目标
-        if (data_pack->x1 != 0)
-        {
-                data_pack->flag2 = 0x01;
-        }
-        unsigned size = sizeof(*data_pack);
-	printf("sizeofdata = %d\n", size);
-        int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
-	printf("set = %d\n", set);
-}
+  /* 建立udp socket */
+  sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if(sock_fd < 0)
+  {
+    perror("socket");
+    exit(1);
+  }
 
-int main(){
-     	//初始化套接字init socket       
-        int sockClient = socket(AF_INET, SOCK_DGRAM, 0); 
-       	if (sockClient == -1) 
-       	{
-      	        printf("socket error!");
-       	        return 0;
-       	}
-       	struct sockaddr_in addrSrv;
-       	addrSrv.sin_addr.s_addr = inet_addr("192.168.43.11");//ip地址重要！！！Srv IP is "192.168.1.10"
-        addrSrv.sin_family = AF_INET;
-        addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
+  /* 设置address */
+  struct sockaddr_in addr_serv;
+  int len;
+  memset(&addr_serv, 0, sizeof(addr_serv));
+  addr_serv.sin_family = AF_INET;
+  addr_serv.sin_addr.s_addr = inet_addr(DSET_IP_ADDRESS);
+  addr_serv.sin_port = htons(DEST_PORT);
+  len = sizeof(addr_serv);
 
-	SendInfo sendinfos;
-        sendinfos.f_num = 100;
-        sendinfos.t_h = 12;
-        sendinfos.t_m = 30;
-        sendinfos.t_ms = 800;
-        sendinfos.x1 = 256;
-        sendinfos.y1 = 320;
-	while(1){
-        	Net_Send_new(sockClient, addrSrv, &sendinfos);
-		printf("sending......\n");
-		sleep(0.01);
-	}
-	close(sockClient);
+
+  int send_num;
+  int recv_num;
+  char send_buf[20] = "hey, who are you?";
+  char recv_buf[20];
+
+  printf("client send: %s\n", send_buf);
+
+  send_num = sendto(sock_fd, send_buf, strlen(send_buf), 0, (struct sockaddr *)&addr_serv, len);
+
+  if(send_num < 0)
+  {
+    perror("sendto error:");
+    exit(1);
+  }
+
+  recv_num = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&addr_serv, (socklen_t *)&len);
+
+  if(recv_num < 0)
+  {
+    perror("recvfrom error:");
+    exit(1);
+  }
+
+  recv_buf[recv_num] = '\0';
+  printf("client receive %d bytes: %s\n", recv_num, recv_buf);
+
+  close(sock_fd);
+
+  return 0;
 }
