@@ -13,6 +13,9 @@
 #include<stdint.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
+
+using namespace std;
+
 struct SendInfo {
         uint8_t flag1 = 0xAB;
         uint8_t flag2;
@@ -20,7 +23,7 @@ struct SendInfo {
         uint8_t t_h;
         uint8_t t_m;
         uint8_t t_s;
-        uint8_t t_ms;
+        uint16_t t_ms;
         uint16_t x1; 
         uint16_t y1; 
         uint8_t flag3 = 0xBB;    
@@ -38,8 +41,10 @@ void Net_Send_new(int sockClient, struct sockaddr_in addrSrv,  SendInfo *data_pa
         {
                 data_pack->flag2 = 0x01;
         }
-        unsigned size = sizeof(data_pack);
+        unsigned size = sizeof(*data_pack);
+	printf("sizeofdata = %d\n", size);
         int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
+	printf("set = %d\n", set);
 }
 
 int main(){
@@ -51,7 +56,7 @@ int main(){
        	        return 0;
        	}
        	struct sockaddr_in addrSrv;
-       	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
+       	addrSrv.sin_addr.s_addr = inet_addr("192.168.43.11");//ip地址重要！！！Srv IP is "192.168.1.10"
         addrSrv.sin_family = AF_INET;
         addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 
@@ -65,7 +70,7 @@ int main(){
 	while(1){
         	Net_Send_new(sockClient, addrSrv, &sendinfos);
 		printf("sending......\n");
-		sleep(1);
+		sleep(0.01);
 	}
 	close(sockClient);
 }

@@ -34,15 +34,16 @@
 #include <memory>
 #include <queue>
 #include<pthread.h>
-#include "main.hpp"
+#include "test.hpp"
+
 using namespace cv;
 using namespace std;
 
-#define AOI_X 160
+#define AOI_X 120
 #define AOI_Y 128
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
-#define AREA_THRESHOLD  150
+#define AREA_THRESHOLD  50
 
 
 int main(){
@@ -53,7 +54,7 @@ int main(){
 	int update_flag = 0;
 	clock_t start_1, end_1;
 	clock_t start_2, end_2;
-	char prefix[] = "/home/nvidia/Desktop/multi-threading/test/pic13/frame_000000";
+	char prefix[] = "/home/nvidia/205shiyan/pic13/frame_000000";
 	char postfix[] = ".png";
 	char filename[255];
 
@@ -61,6 +62,7 @@ int main(){
 	int nc = 640;//列
 	int total = nr*nc;//像素数
 	uchar transf_fun[16384] = { 0 };//映射关系数组
+	Mat img_back(256, 320, CV_8UC1);//背景
 
 	for(int k = 2000; k<=5000; k++)
 	{
@@ -69,6 +71,7 @@ int main(){
 		Mat src  = imread(filename,IMREAD_ANYDEPTH);//原始图像
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 
+		ushort  *p_1 = NULL;
 		if ( k % 50 == 0)//每50帧更新一次映射关系
 		{
 			//存储直方图统计结果的数组
@@ -118,13 +121,7 @@ int main(){
 		end_1 = clock();
 		printf("Image Enhance = %fs-------------------------------------------------------\n", double(end_1 - start_1)/CLOCKS_PER_SEC);
 
-		printf("**********************************************");	
-
-		
-
 		start_2 = clock();
-		Mat img_back(256, 320, CV_8UC1);
-
 		//背景初始化
 		if(update_flag == 0)
 		{
@@ -150,7 +147,7 @@ int main(){
 		}
 
 		//背景更新
-		if ( k % 50 == 0 && detect == 0)
+		if ( k % 50 == 1 && detect == 0)
 		{
 			img_back = dst_2.clone();
 			printf("---------------------------------背景更新----------------------------------\n");

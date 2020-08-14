@@ -51,8 +51,14 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 	Mat imgFront,imglabel, stats, centroids;
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	absdiff(img, background, imgFront);
+	imshow("img_diff", imgFront);
+	cvWaitKey(1);
 	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
+	imshow("img_bw", imgFront);
+	cvWaitKey(1);
 	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
+	imshow("img_open", imgFront);
+	cvWaitKey(1);
 	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
 	vector<DetectInfo> detectinfos(count);
 	for(int i = 1; i != count; ++i){
@@ -332,7 +338,7 @@ struct SendInfo {
         uint8_t t_h;
         uint8_t t_m;
         uint8_t t_s;
-        uint8_t t_ms;
+        uint16_t t_ms;
         uint16_t x1; 
         uint16_t y1;
 	uint8_t flag3 = 0xBB;    
