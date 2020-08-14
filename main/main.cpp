@@ -304,6 +304,11 @@ void *img_enhance_thread(Queue<ImageData> *q)
 
 void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
+	char prefix[] = "/home/nvidia/pic/target_";
+	char postfix[] = ".png";
+	char filename[255];
+	int target_count = 0;
+
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
@@ -337,9 +342,12 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
+			target_count++;
 			x1 = AOI_X + (unsigned short)detect_infos[0].x;
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
+			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
+			imwrite(filename, image_pro);
 		}
 		else
 		{

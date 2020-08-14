@@ -48,6 +48,7 @@ using namespace std;
 
 int main(){
 
+	int target_count = 0;
 	int detect = 0;
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
@@ -58,6 +59,9 @@ int main(){
 	char postfix[] = ".png";
 	char filename[255];
 
+	char save_prefix[] = "/home/nvidia/205shiyan/pic_test/target_";
+	char save_postfix[] = ".png";
+	char save_filename[255];
 	int nr = 512;//行
 	int nc = 640;//列
 	int total = nr*nc;//像素数
@@ -136,10 +140,13 @@ int main(){
 		if(detect_infos.size())
 		{
 
+			target_count++;
 			x1 = AOI_X + (unsigned short)detect_infos[0].x;
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			detect = 1;
+			sprintf(save_filename, "%s%d%s", save_prefix, target_count, save_postfix);
+			imwrite(save_filename, dst_2);
 		}
 		else
 		{
