@@ -82,7 +82,7 @@ struct ReceiveInfo {
         uint8_t t_h;
         uint8_t t_m;
         uint8_t t_s;
-        uint16_t t_ms;
+        uint8_t t_ms;
  	uint8_t flag2;    
 } __attribute__((packed));
 
@@ -106,7 +106,7 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         FD_SET(fd,&fs_read);    
            
         time.tv_sec = 0;    
-        time.tv_usec = 5000;    
+        time.tv_usec = 12000;    
            
         //使用select实现串口的多路通信    
         fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);    
@@ -184,8 +184,8 @@ int serialport_inti()
 {
 
 	/*打开串口*/
-	//int fd = open( "/dev/ttyTHS2", O_RDWR|O_NOCTTY|O_NDELAY);//   串口号(ttyS0,ttyS1,ttyS2)
-	int fd = open( "/dev/ttyS0", O_RDWR|O_NOCTTY|O_NDELAY);
+	int fd = open( "/dev/ttyTHS2", O_RDWR|O_NOCTTY|O_NDELAY);//   串口号(ttyS0,ttyS1,ttyS2)
+	//int fd = open( "/dev/ttyS0", O_RDWR|O_NOCTTY|O_NDELAY);
 	if (fd<0)    
         {    
             perror("Can't Open Serial Port");   

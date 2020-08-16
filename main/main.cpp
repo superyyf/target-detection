@@ -210,11 +210,11 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
-	clock_t start_1, end_1, start_p;
-	start_1 = clock();
+	struct timeval start_1, end_1, start_p;
+	gettimeofday(&start_1, NULL);
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
-		start_p = clock();
+		gettimeofday(&start_p, NULL);
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != XDIM * YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -280,9 +280,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
-		
-		end_1 = clock();
-		printf("Image Enhance = %fs / %fs-------------------------------------------------------\n", double(end_1 - start_p)/CLOCKS_PER_SEC, double(end_1 - start_1)/CLOCKS_PER_SEC/FrameNum);
+		gettimeofday(&end_1, NULL);
+		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)(end_1.tv_usec - start_p.tv_usec)/1000, (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -302,7 +301,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
-	clock_t start_2, end_2;
+	struct timeval start_2, end_2;
 	Mat img_back(256, 320, CV_8UC1);
 	while(true)
 	{
@@ -310,7 +309,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		unique_ptr<ImageData> imgdata;
 		imgdata = p1->input->pop();
 
-		start_2 = clock();
+		gettimeofday(&start_2, NULL);
 		if(imgdata == NULL)
 		{
 			p1->output->end();
@@ -358,8 +357,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("****************************背景更新************************\n");
 		}
 		
-		end_2 = clock();
-		printf("--------------------Image Process = %fs-----------------------------------\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
+		gettimeofday(&end_2, NULL);
+		printf("--------------------Image Process = %fms-----------------------------------\n", (double)(end_2.tv_usec - start_2.tv_usec)/1000);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
 	return NULL;
@@ -383,9 +382,9 @@ void *send_data_thread(Queue<TargetData> *t)
 	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
-	clock_t start_3, end_3;	
+	struct timeval start_3, end_3;
 	while(true){
-		start_3 = clock();	
+		gettimeofday(&start_3, NULL);
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
 		rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
         	if(len == -1){    
@@ -421,8 +420,8 @@ void *send_data_thread(Queue<TargetData> *t)
 			}
 				
 		//}
-		end_3 = clock();
-		printf("----------------------------------------------Send Data = %fs\n", double(end_3 - start_3)/CLOCKS_PER_SEC);
+		gettimeofday(&end_3, NULL);
+		printf("----------------------------------------------Send Data = %fms\n", (double)(end_3.tv_usec - start_3.tv_usec)/1000);
 	}
 	printf("\n------------------------------------------结束发送线程-----------------------------------------\n");
 	close(fd);

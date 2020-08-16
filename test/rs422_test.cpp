@@ -8,6 +8,13 @@
  #include<termios.h>    /*PPSIX 终端控制定义*/    
  #include<errno.h>      /*错误号定义*/    
  #include<string.h>
+ #include<time.h>
+#include<math.h>
+#include<iostream>
+#include<chrono>
+#include <sys/time.h>
+
+using namespace std;
 
 //宏定义    
 #define FALSE  -1    
@@ -19,8 +26,8 @@ struct ReceiveInfo {
         uint8_t t_h;
         uint8_t t_m;
         uint8_t t_s;
-        uint16_t t_ms;
-        uint8_t flag2;
+        uint8_t t_ms;
+	uint8_t flag2;
 } __attribute__((packed));
 
 /*******************************************************************  
@@ -42,10 +49,10 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         FD_SET(fd,&fs_read);    
            
         time.tv_sec = 0;    
-        time.tv_usec = 15000;    
+        time.tv_usec =100000 ;    
            
         //使用select实现串口的多路通信    
-        fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);    
+        fs_sel = select(fd+1,&fs_read,NULL,NULL,NULL);    
         printf("fs_sel = %d\n",fs_sel);    
         if(fs_sel)    
         {    
@@ -79,8 +86,8 @@ int main()
 {
 
 	/*打开串口*/
-	//int fd = open( "/dev/ttyTHS2", O_RDWR|O_NOCTTY|O_NDELAY);//   串口号(ttyS0,ttyS1,ttyS2)
-	int fd = open( "/dev/ttyS0", O_RDWR|O_NOCTTY|O_NDELAY);
+	int fd = open( "/dev/ttyTHS2", O_RDWR|O_NOCTTY|O_NDELAY);//   串口号(ttyS0,ttyS1,ttyS2)
+	//int fd = open( "/dev/ttyS0", O_RDWR|O_NOCTTY|O_NDELAY);
 	if (fd<0)    
         {    
             perror("Can't Open Serial Port");   
@@ -243,19 +250,24 @@ int main()
 	/*接收信号*/
 	char rcv_buf[8];
 	ReceiveInfo *rcv_info; 
+	struct timeval start_1, end_1;
 	while (1) //循环读取数据    
             {   
+		gettimeofday(&start_1, NULL);
                 int len = UART0_Recv(fd, rcv_buf,sizeof(rcv_buf));    
-
                 if(len > 0)    
                 {   
 			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d/n", rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_s, rcv_info->t_ms);
+			printf("flag1 : %d\nf_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nt_10ms : %d\n", rcv_info->flag1,rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_s, rcv_info->t_ms);
+
+			printf("\n************************************\n");
                 }    
                 else    
                 {    
                     printf("cannot receive data\n");    
                 }    
+		gettimeofday(&end_1,NULL);
+		cout << "time  : " << double(end_1.tv_usec - start_1.tv_usec)/1000 <<endl;
             } 
 
 

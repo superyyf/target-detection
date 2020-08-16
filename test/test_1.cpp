@@ -68,7 +68,21 @@ int main(){
 	uchar transf_fun[16384] = { 0 };//映射关系数组
 	Mat img_back(256, 320, CV_8UC1);//背景
 
-	for(int k = 2000; k<=5000; k++)
+	int fd = serialport_inti();//初始化串口
+	char rcv_buf[8];
+	ReceiveInfo *rcv_info;
+	
+	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
+	if (sockClient == -1){
+		printf("socket error!");
+	}
+
+	struct sockaddr_in addrSrv;
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
+	addrSrv.sin_family = AF_INET;
+	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
+
+	for(int k = 4500; k<=5000; k++)
 	{
 		start_1 = clock();
 		sprintf(filename, "%s%04d%s", prefix, k, postfix);	
@@ -150,6 +164,8 @@ int main(){
 		}
 		else
 		{
+			x1 = 0;
+			y1 = 0;
 			detect = 0;
 		}
 
@@ -162,6 +178,32 @@ int main(){
 		
 		end_2 = clock();
 		printf("--------------------Image Process = %fs-----------------------------------\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
+
+		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
+		rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
+        	if(len == -1){    
+	
+                    	printf("cannot receive data\n");    
+                }    
+		
+
+		if(x1 != 0){
+			SendInfo sendinfos;
+			sendinfos.f_num = rcv_info->f_num;
+			sendinfos.t_h = rcv_info->t_h;
+			sendinfos.t_m = rcv_info->t_m;
+			sendinfos.t_s = rcv_info->t_s;
+			sendinfos.t_ms = rcv_info->t_ms;
+			sendinfos.x1 = x1;//targetdata->x;
+			sendinfos.y1 = y1;//targetdata->y;
+			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
+			if(int set = sendto(sockClient, &sendinfos, sizeof(sendinfos), 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr)) < 0){
+				perror("UDP Error ");
+			}
+			else
+				printf("Sucess !\n");
+		}	
+		
 		
 	}
 return 0;
