@@ -333,7 +333,6 @@ return fd;
 /************************************************************/
 struct SendInfo {
         uint8_t flag1 = 0xAB;
-        uint8_t flag2;
 	uint8_t f_num;
         uint8_t t_h;
         uint8_t t_m;
@@ -341,7 +340,7 @@ struct SendInfo {
         uint16_t t_ms;
         uint16_t x1; 
         uint16_t y1;
-	uint8_t flag3 = 0xBB;    
+	uint8_t flag2 = 0xBB;    
 } __attribute__((packed));
 
 
@@ -351,11 +350,6 @@ struct SendInfo {
 void Net_Send_new(int sockClient, struct sockaddr_in addrSrv,  SendInfo *data_pack)
 {
 
-        data_pack->flag2 = 0x00;//标志位 有无检测到目标
-        if (data_pack->x1 != 0)
-        {
-                data_pack->flag2 = 0x01;
-        }
         unsigned size = sizeof(data_pack);
         int set = sendto(sockClient, &data_pack, size, 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr));
 }

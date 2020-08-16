@@ -1,80 +1,17 @@
-#ifndef MAIN_HPP
-#define MAIN_HPP
-
-#include<stdio.h>      /*标准输入输出定义*/    
-#include<stdlib.h>     /*标准函数库定义*/    
-#include<unistd.h>     /*Unix 标准函数定义*/    
-#include<sys/types.h>     
-#include<sys/stat.h>       
-#include<fcntl.h>      /*文件控制定义*/    
-#include<termios.h>    /*PPSIX 终端控制定义*/    
-#include<errno.h>      /*错误号定义*/    
-#include<string.h>
-#include<vector>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include<opencv2/imgproc/imgproc_c.h>
-#include <cv.h>
-
+#include <stdint.h>
+ #include<stdio.h>      /*标准输入输出定义*/    
+ #include<stdlib.h>     /*标准函数库定义*/    
+ #include<unistd.h>     /*Unix 标准函数定义*/    
+ #include<sys/types.h>     
+ #include<sys/stat.h>       
+ #include<fcntl.h>      /*文件控制定义*/    
+ #include<termios.h>    /*PPSIX 终端控制定义*/    
+ #include<errno.h>      /*错误号定义*/    
+ #include<string.h>
 
 //宏定义    
 #define FALSE  -1    
 #define TRUE   0
-
-using namespace std;
-using namespace cv;
-
-/***********************************目标检测*************************/
-/********************************************************************/
-/*********************************************************************/
-
-
-//目标信息
-struct DetectInfo {
-    /* 质心(x,y) */
-    double x,y;
-    /* 目标面积 */
-    int area;
-
-    friend bool operator>(const DetectInfo &d1, const DetectInfo &d2) {
-        return d1.area > d2.area;
-    }  
-};
-
-/* 目标检测函数--------------------------------------------------yyf
- * img: 待检测图像
- * area_threshold: 面积阈值
- * 输出目标信息数组
- */
-vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
-	Mat imgFront,imglabel, stats, centroids;
-	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-	absdiff(img, background, imgFront);
-	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
-	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
-	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
-	vector<DetectInfo> detectinfos(count);
-	for(int i = 1; i != count; ++i){
-		detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
-		detectinfos[i].x = centroids.at<double>(i, 0);
-		detectinfos[i].y = centroids.at<double>(i, 1);
-	}
-	sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
-	for (int i = 0; i < count; ++i) {
-		if (detectinfos[i].area < area_threshold) {
-			detectinfos.resize(i);
-			break;
-		}
-	}
-	return detectinfos;
-}
-
-
-
-/********************************串口通信**************************/
-/*****************************************************************/
-/******************************************************************/
 //串口数据结构体
 struct ReceiveInfo {
         uint8_t flag1;
@@ -83,9 +20,8 @@ struct ReceiveInfo {
         uint8_t t_m;
         uint8_t t_s;
         uint16_t t_ms;
- 	uint8_t flag2;    
+        uint8_t flag2;
 } __attribute__((packed));
-
 
 /*******************************************************************  
     * 名称：            UART0_Recv  
@@ -106,10 +42,11 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         FD_SET(fd,&fs_read);    
            
         time.tv_sec = 0;    
-        time.tv_usec = 5000;    
+        time.tv_usec = 15000;    
            
         //使用select实现串口的多路通信    
         fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);    
+        printf("fs_sel = %d\n",fs_sel);    
         if(fs_sel)    
         {    
             len = read(fd,rcv_buf,data_len);    
@@ -121,66 +58,24 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         }         
     } 
 
-
-
-/********************************************************************  
-    * 名称：            UART0_Send  
-    * 功能：            发送数据  
-    * 入口参数：        fd           文件描述符      
-    *                   send_buf     存放串口发送数据  
-    *                   data_len     一帧数据的个数  
-    * 出口参数：        正确返回为1，错误返回为0  
-    *******************************************************************/    
-int UART0_Send(int fd, int flag)    
-{    
-	int len = 0;
-        unsigned short start_buf[] = {0x01,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};	
-	unsigned short end_buf[] = {0x00,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
-	if(flag == 1)
+void data_analysis(char* rcv_buf,int data_len)
+{
+	if(data_len != 7)
 	{
-        	len = write(fd, start_buf, sizeof(start_buf));    
-        	if (len == sizeof(start_buf))    
-        	{    
-            		printf("sizeofbuf = %d ,send data is %d\n",sizeof(start_buf),start_buf);  
-            		return len;    
-        	}         
-        	else       
-        	{    
-            		printf("Error\n");           
-            		tcflush(fd,TCOFLUSH);    
-            		return FALSE;    
-        	}	    
+		printf("data frame num error !");
 	}
-	if(flag == 0)
-	{
-		len = write(fd, end_buf,sizeof(end_buf));
-        	if (len == sizeof(end_buf))    
-        	{    
-            		printf("sizeofbuf = %d ,send data is %d\n",sizeof(end_buf),end_buf);  
-            		return len;    
-        	}         
-        	else       
-        	{    
-            		printf("Error\n");           
-            		tcflush(fd,TCOFLUSH);    
-            		return FALSE;    
-        	}    
-	}
-	else
-		printf("Param Error\n");
-
-
-           
-}    
-
-
-
-
-
-
+	
+	printf("帧头 ： %d \n",rcv_buf[0]);
+	printf("视频帧号 ： %d \n",rcv_buf[1]);
+	printf("时间-小时 ： %d \n",rcv_buf[2]);
+	printf("时间-分钟 ： %d \n",rcv_buf[3]);
+	printf("时间-秒 ： %d \n",rcv_buf[4]);
+	printf("时间-10毫秒 ： %d \n",rcv_buf[5]);
+	printf("校验位 ： %d \n",rcv_buf[6]);		
+}
  
-//串口初始化
-int serialport_inti()
+
+int main()
 {
 
 	/*打开串口*/
@@ -339,31 +234,35 @@ int serialport_inti()
         {    
             perror("com set error!\n");      
             return (FALSE);     
-        }
-
-return fd;
- 
-}	
-
-/***********************************UDP网口通信**************/
-/************************************************************/
-/************************************************************/
-struct SendInfo {
-        uint8_t flag1 = 0xAB;
-	uint8_t f_num;
-        uint8_t t_h;
-        uint8_t t_m;
-        uint8_t t_s;
-        uint16_t t_ms;
-        uint16_t x1; 
-        uint16_t y1;
-	uint8_t flag2 = 0xBB;    
-} __attribute__((packed));
+        } 
 
 
 
 
 
+	/*接收信号*/
+	char rcv_buf[8];
+	ReceiveInfo *rcv_info; 
+	while (1) //循环读取数据    
+            {   
+                int len = UART0_Recv(fd, rcv_buf,sizeof(rcv_buf));    
 
-#endif /* ifndef MAIN_HPP */
+                if(len > 0)    
+                {   
+			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
+			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d/n", rcv_info->f_num, rcv_info->t_h, rcv_info->t_m, rcv_info->t_s, rcv_info->t_ms);
+                }    
+                else    
+                {    
+                    printf("cannot receive data\n");    
+                }    
+            } 
+
+
+
+	/*关闭串口*/
+	close(fd);         
+	return 0;
+     
+    }              
 
