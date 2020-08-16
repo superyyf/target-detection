@@ -121,6 +121,10 @@ struct TargetData{
 	unsigned short x;
 	unsigned short y;
 	int frame_num;
+	uint8_t t_h;
+	uint8_t t_m;
+	uint8_t t_s;
+	uint16_t t_ms;
 };
 
 template<typename Input, typename Output> struct Pipe{
@@ -301,7 +305,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
-	struct timeval start_2, end_2;
+	struct timeval start_2, end_2, time_tar;
 	Mat img_back(256, 320, CV_8UC1);
 	while(true)
 	{
@@ -326,7 +330,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			update_flag = false;
 		}
 
-		
+		TargetData targetdata;
+
 		//目标检测
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
@@ -337,6 +342,14 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);
+			geitimeofday(&time_tar,NULL);
+			time_t time_tar_t = time_tar.tv_sec;
+			struct tm *target_time = localtime(&time_tar_t);
+			targetdata.t_h = target_time->tm_hour;
+			targetdata.t_m = target_time->tm_min;
+			targetdata.t_s = target_time->tm_sec;
+			targetdata.t_ms = time_tar.tv_usec/1000;	
+			
 		}
 		else
 		{
@@ -344,7 +357,6 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			y1 = 0;
 		}
 		
-		TargetData targetdata;
 		targetdata.x = x1;
 		targetdata.y = y1;
 		targetdata.frame_num = frame_num;
@@ -369,9 +381,6 @@ void *send_data_thread(Queue<TargetData> *t)
 {
 			
 	//初始化套接字init socket 	
-	int fd = serialport_inti();//初始化串口
-	char rcv_buf[10];
-	ReceiveInfo *rcv_info;
 	
 	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
 	if (sockClient == -1){
@@ -406,11 +415,11 @@ void *send_data_thread(Queue<TargetData> *t)
 
 		//if(targetdata->x != 0){
 			SendInfo sendinfos;
-			sendinfos.f_num = rcv_info->f_num;
-			sendinfos.t_h = rcv_info->t_h;
-			sendinfos.t_m = rcv_info->t_m;
-			sendinfos.t_s = rcv_info->t_s;
-			sendinfos.t_ms = rcv_info->t_ms;
+			sendinfos.f_num = targetdata->f_num;
+			sendinfos.t_h = targetdata->t_h;
+			sendinfos.t_m = targetdata->t_m;
+			sendinfos.t_s = targetdata->t_s;
+			sendinfos.t_ms = targetdata->t_ms;
 			
 			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
 			sendinfos.x1 = targetdata->x;
@@ -446,9 +455,8 @@ int main(void)
 	printf("ydim           = %d\n", pxd_imageYdim());
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
-
-	//int len1 = UART0_Send(fd, 1);
-
+	
+	set_system_time();
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
@@ -462,7 +470,6 @@ int main(void)
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
 	pthread_join(t3, NULL);
-	//int len2 = UART0_Send(fd, 0);
 	return 0;	
 }
 

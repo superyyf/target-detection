@@ -105,11 +105,11 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
         FD_ZERO(&fs_read);    
         FD_SET(fd,&fs_read);    
            
-        time.tv_sec = 0;    
-        time.tv_usec = 12000;    
+        //time.tv_sec = 0;    
+        //time.tv_usec = 12000;    
            
         //使用select实现串口的多路通信    
-        fs_sel = select(fd+1,&fs_read,NULL,NULL,&time);    
+        fs_sel = select(fd+1,&fs_read,NULL,NULL,NULL);    
         if(fs_sel)    
         {    
             len = read(fd,rcv_buf,data_len);    
@@ -131,44 +131,22 @@ int UART0_Recv(int fd, char *rcv_buf,int data_len)
     *                   data_len     一帧数据的个数  
     * 出口参数：        正确返回为1，错误返回为0  
     *******************************************************************/    
-int UART0_Send(int fd, int flag)    
+bool UART0_Send(int fd)    
 {    
 	int len = 0;
-        unsigned short start_buf[] = {0x01,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};	
-	unsigned short end_buf[] = {0x00,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
-	if(flag == 1)
-	{
-        	len = write(fd, start_buf, sizeof(start_buf));    
-        	if (len == sizeof(start_buf))    
-        	{    
-            		printf("sizeofbuf = %d ,send data is %d\n",sizeof(start_buf),start_buf);  
-            		return len;    
-        	}         
-        	else       
-        	{    
-            		printf("Error\n");           
-            		tcflush(fd,TCOFLUSH);    
-            		return FALSE;    
-        	}	    
-	}
-	if(flag == 0)
-	{
-		len = write(fd, end_buf,sizeof(end_buf));
-        	if (len == sizeof(end_buf))    
-        	{    
-            		printf("sizeofbuf = %d ,send data is %d\n",sizeof(end_buf),end_buf);  
-            		return len;    
-        	}         
-        	else       
-        	{    
-            		printf("Error\n");           
-            		tcflush(fd,TCOFLUSH);    
-            		return FALSE;    
-        	}    
-	}
+        char start_buf[] = {0x01};	
+        len = write(fd, start_buf, sizeof(start_buf));    
+	if(len != sizeof(start_buf))
+        {    
+            	printf("Error\n");           
+            	tcflush(fd,TCOFLUSH);    
+            	return false;    
+        }	    
 	else
-		printf("Param Error\n");
-
+	{
+		printf("Send message sucessed!\n");
+		return true;
+	}
 
            
 }    
@@ -345,6 +323,52 @@ return fd;
  
 }	
 
+
+void set_system_time()
+{
+	int fd = serialport_inti();//初始化串口
+	char rcv_buf[10];
+	ReceiveInfo *rcv_info;
+	
+	while(true){
+		UART0_Send(fd);
+		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
+        	if(len < 0){    
+	
+                    	printf("cannot receive data\n");    
+                }    
+		else{
+			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
+			if(rcv_info->t_h >= 0 && rcv_info->t_h <= 24 && 
+				rcv_info->t_m >= 0 && rcv_info->t_m < 60 && 
+				rcv_info->t_s >= 0 && rcv_info->t_s < 60 && 
+				rcv_info->t_ms >= 0 && rcv_info->t_ms < 1000 ){
+
+				struct tm *time_p = new struct tm();
+				struct timeval time_tv;
+				gettimeofday(&time_tv, NULL);
+				time_p->tm_hour = rcv_info->t_h;
+				time_p->tm_min = rcv_info->t_m;
+				time_p->tm_sec = rcv_info->t_s;
+				time_t time_sec = mktime(time_p);
+				delete(time_p);
+				time_tv.tv_sec = time_sec;
+				time_tv.tv_usev = rcv_info->t_ms * 1000;
+
+				if(settimeofday(&time_tv,NULL) < 0){
+					printf("Time Setting Failed!\n");
+				}
+				else{
+					printf("Time Setting Sucessed!\n");
+					break;
+				}
+			}
+		}
+		sleep(1);
+	}	
+	return NULL;
+}		
+    
 /***********************************UDP网口通信**************/
 /************************************************************/
 /************************************************************/
