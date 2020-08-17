@@ -342,7 +342,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);
-			geitimeofday(&time_tar,NULL);
+			gettimeofday(&time_tar,NULL);
 			time_t time_tar_t = time_tar.tv_sec;
 			struct tm *target_time = localtime(&time_tar_t);
 			targetdata.t_h = target_time->tm_hour;
@@ -394,18 +394,6 @@ void *send_data_thread(Queue<TargetData> *t)
 	struct timeval start_3, end_3;
 	while(true){
 		gettimeofday(&start_3, NULL);
-		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-        	if(len == -1){    
-	
-                    	printf("cannot receive data\n");    
-			rcv_info->f_num = 100;
-			rcv_info->t_h = 23;
-			rcv_info->t_m = 59;
-			rcv_info->t_s = 59;
-			rcv_info->t_ms = 999;
-                }    
-		
 		unique_ptr<TargetData> targetdata;
 		targetdata = t->pop();
 		
@@ -415,7 +403,7 @@ void *send_data_thread(Queue<TargetData> *t)
 
 		//if(targetdata->x != 0){
 			SendInfo sendinfos;
-			sendinfos.f_num = targetdata->f_num;
+			sendinfos.f_num = targetdata->frame_num;
 			sendinfos.t_h = targetdata->t_h;
 			sendinfos.t_m = targetdata->t_m;
 			sendinfos.t_s = targetdata->t_s;
