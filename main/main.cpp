@@ -106,9 +106,12 @@
 #include "queue.hpp"
 
 #include<pthread.h>
+#include<chrono>
 
 using namespace cv;
 using namespace std;
+using std::chrono::high_resolution_clock;
+using std::chrono::milliseconds;
 
 typedef void *(*THREAD_FUNC)(void *);
 
@@ -305,7 +308,9 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
-	struct timeval start_2, end_2, time_tar;
+	time_t timefinal;
+	unsigned short time_ms;
+	struct timeval start_2, end_2, time_end;
 	Mat img_back(256, 320, CV_8UC1);
 	while(true)
 	{
@@ -342,13 +347,23 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);
-			gettimeofday(&time_tar,NULL);
-			time_t time_tar_t = time_tar.tv_sec;
-			struct tm *target_time = localtime(&time_tar_t);
+			gettimeofday(&timeend,NULL);
+			unsigned long sec_t = timeend.tv_sec - timestart.tv_sec;
+			long usec_t = timeend.tv_usec - timestart.tv_usec + timeinti.tv_usec;
+			if(usec_t >= 0){
+				int a = usec_t/1000000;
+				time_ms = (sec_t % 1000000)/1000;
+				timefinal = timeinti.tv_sec + sec_t + a;
+			}
+			else{
+				timefinal = timeinti.tv_sec + sec_t - 1;
+				time_ms = (1000000+usec_t)/1000;
+			}
+			struct tm *target_time = localtime(&timefinal);
 			targetdata.t_h = target_time->tm_hour;
 			targetdata.t_m = target_time->tm_min;
 			targetdata.t_s = target_time->tm_sec;
-			targetdata.t_ms = time_tar.tv_usec/1000;	
+			targetdata.t_ms = time_ms;	
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
@@ -444,7 +459,11 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
-	set_system_time();
+
+	struct timeval timeinti;
+	set_system_time(&timeinti);
+	struct timeval timestart;
+	gettimeofday(&timestart, NULL);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;

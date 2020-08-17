@@ -360,7 +360,7 @@ void close_video_flow(int fd)
 	close(fd);
 }
 
-void set_system_time()
+void set_system_time(struct timeval *t)
 {
 	int fd = serialport_inti();
 	char rcv_buf[10];
@@ -379,28 +379,17 @@ void set_system_time()
 				rcv_info->t_m >= 0 && rcv_info->t_m < 60 && 
 				rcv_info->t_s >= 0 && rcv_info->t_s < 60 && 
 				rcv_info->t_ms >= 0 && rcv_info->t_ms < 1000 ){
-
-
-				struct tm *time_p = new struct tm();
-				struct timeval time_tv;
-				gettimeofday(&time_tv, NULL);
-				time_p->tm_hour = rcv_info->t_h;
-				time_p->tm_min = rcv_info->t_m;
-				time_p->tm_sec = rcv_info->t_s;
-				time_t time_sec = mktime(time_p);
-				time_tv.tv_sec = time_sec;
-				time_tv.tv_usec = rcv_info->t_ms * 10000;
 				printf("t_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d\n", time_p->tm_hour, time_p->tm_min, time_p->tm_sec, rcv_info->t_ms*10);
-
-				delete(time_p);
-
-				if(settimeofday(&time_tv,NULL) < 0){
-					printf("Time Setting Failed!\n");
-				}
-				else{
-					printf("Time Setting Sucessed!\n");
-					close(fd);
-					break;
+				struct tm time_tm;
+				time_tm.tm_hour = rcv_info->t_h;
+				time_tm.tm_min = rcv_info->t_m;
+				time_tm.tm_sec = rcv_info->t_s;
+				time_t time1 = mktime(&time_tm);
+				t->tv_sec = time1;
+				t->tv_usec = rcv_info->t_ms*10;
+				printf("Set Time Sucessed!\n");	
+				close(fd);
+				break;
 				}
 			}
 		}
