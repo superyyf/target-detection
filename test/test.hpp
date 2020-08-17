@@ -325,9 +325,47 @@ return fd;
  
 }	
 
-void set_system_time()
+void open_video_flow(int fd)
 {
-        int fd = serialport_inti();//初始化串口
+        uint8_t start_signal[] = {0x01,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
+        int len = write(fd, start_signal, sizeof(start_signal));
+        while(true)
+        {
+                int len = write(fd, start_signal, sizeof(start_signal));
+                if(len != sizeof(start_signal)){
+                        printf("Send Start Signal Failed!\n");
+                        tcflush(fd,TCOFLUSH);
+                }
+                else{
+                        printf("Send Start Signal Sucessed!\n");
+                        break;
+                }
+                sleep(1);
+        }
+}
+
+void close_video_flow(int fd)
+{
+        uint8_t end_signal[] = {0x00,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
+        int len = write(fd, end_signal, sizeof(end_signal));
+        while(true)
+        {
+                int len = write(fd, end_signal, sizeof(end_signal));
+                if(len != sizeof(end_signal)){
+                        printf("Send End Signal Failed!\n");
+                        tcflush(fd,TCOFLUSH);
+                }
+                else{
+                        printf("Send End Signal Sucessed!\n");
+                        break;
+                }
+                sleep(1);
+        }
+        close(fd);
+}
+
+void set_system_time(int fd)
+{
         char rcv_buf[10];
         ReceiveInfo *rcv_info;
     

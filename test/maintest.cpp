@@ -195,7 +195,9 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 
-	set_system_time();
+	int fd = serialport_inti();
+	open_video_flow(fd);
+	set_system_time(fd);
 
 	//int len1 = UART0_Send(fd, 1);
 	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
@@ -214,10 +216,6 @@ int main(void)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
-
-	int fd = serialport_inti();//初始化串口
-	char rcv_buf[10];
-	ReceiveInfo *rcv_info;
 	
 	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
 	if (sockClient == -1){
@@ -376,7 +374,8 @@ int main(void)
 		//}	
 		
 	}
-
+	int fd1 = serialport_inti();
+	close_video_flow(fd1);
 	close(sockClient);//关闭socket
 	return 0;	
 }

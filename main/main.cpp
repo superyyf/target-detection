@@ -402,7 +402,7 @@ void *send_data_thread(Queue<TargetData> *t)
 			break;
 		}
 
-		//if(targetdata->x != 0){
+		if(targetdata->x != 0){
 			SendInfo sendinfos;
 			sendinfos.f_num = targetdata->frame_num;
 			sendinfos.t_h = targetdata->t_h;
@@ -417,7 +417,7 @@ void *send_data_thread(Queue<TargetData> *t)
 				perror("UDP Error ");
 			}
 				
-		//}
+		}
 		gettimeofday(&end_3, NULL);
 		printf("----------------------------------------------Send Data = %fms\n", (double)(end_3.tv_usec - start_3.tv_usec)/1000);
 	}
@@ -444,7 +444,9 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
-	set_system_time();
+	int fd = serialport_inti();//初始化串口
+	open_video_flow(fd);
+	set_system_time(fd);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
@@ -458,6 +460,9 @@ int main(void)
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
 	pthread_join(t3, NULL);
+
+	int fd1 = serialport_inti();//初始化串口
+	close_video_flow(fd1);
 	return 0;	
 }
 
