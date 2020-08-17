@@ -421,7 +421,6 @@ void *send_data_thread(Queue<TargetData> *t)
 		printf("----------------------------------------------Send Data = %fms\n", (double)(end_3.tv_usec - start_3.tv_usec)/1000);
 	}
 	printf("\n------------------------------------------结束发送线程-----------------------------------------\n");
-	close(fd);
 	close(sockClient);//关闭socket
 	return NULL;
 }

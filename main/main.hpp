@@ -360,6 +360,7 @@ void set_system_time()
 				}
 				else{
 					printf("Time Setting Sucessed!\n");
+					close(fd);
 					break;
 				}
 			}
