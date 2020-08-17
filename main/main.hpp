@@ -331,7 +331,11 @@ void set_system_time()
 	ReceiveInfo *rcv_info;
 	
 	while(true){
-		UART0_Send(fd);
+		if(UART0_Send(fd))
+			printf("Send Message Sucessed!\n");
+		else
+			printf("Send Message Failed!\n");
+		
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
         	if(len < 0){    
 	
