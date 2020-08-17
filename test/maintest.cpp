@@ -195,9 +195,7 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 
-	int fd = serialport_inti();
-	open_video_flow(fd);
-	set_system_time(fd);
+	set_system_time();
 
 	//int len1 = UART0_Send(fd, 1);
 	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];

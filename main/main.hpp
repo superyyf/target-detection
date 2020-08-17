@@ -326,7 +326,6 @@ return fd;
 void open_video_flow(int fd)
 {
 	uint8_t start_signal[] = {0x01,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
-	int len = write(fd, start_signal, sizeof(start_signal));
 	while(true)
 	{
 		int len = write(fd, start_signal, sizeof(start_signal));
@@ -345,7 +344,6 @@ void open_video_flow(int fd)
 void close_video_flow(int fd)
 {
 	uint8_t end_signal[] = {0x00,0x09,0x00,0xc5,0xcc,0x09,0x00,0xc5,0x00,0x01};
-	int len = write(fd, end_signal, sizeof(end_signal));
 	while(true)
 	{
 		int len = write(fd, end_signal, sizeof(end_signal));
@@ -362,13 +360,14 @@ void close_video_flow(int fd)
 	close(fd);
 }
 
-void set_system_time(int fd)
+void set_system_time()
 {
+	int fd = serialport_inti();
 	char rcv_buf[10];
 	ReceiveInfo *rcv_info;
+	open_video_flow(fd);
 	
 	while(true){
-		UART0_Send(fd);
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
         	if(len < 0){    
 	
