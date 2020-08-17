@@ -138,13 +138,13 @@ bool UART0_Send(int fd)
         len = write(fd, start_buf, sizeof(start_buf));    
 	if(len != sizeof(start_buf))
         {    
-            	printf("Error\n");           
+            	printf("Send Message Failed\n");           
             	tcflush(fd,TCOFLUSH);    
             	return false;    
         }	    
 	else
 	{
-		printf("Send message sucessed!\n");
+		printf("Send Message Sucessed!\n");
 		return true;
 	}
 
@@ -331,11 +331,7 @@ void set_system_time()
 	ReceiveInfo *rcv_info;
 	
 	while(true){
-		if(UART0_Send(fd))
-			printf("Send Message Sucessed!\n");
-		else
-			printf("Send Message Failed!\n");
-		
+		UART0_Send(fd);
 		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
         	if(len < 0){    
 	
@@ -357,7 +353,7 @@ void set_system_time()
 				time_t time_sec = mktime(time_p);
 				delete(time_p);
 				time_tv.tv_sec = time_sec;
-				time_tv.tv_usev = rcv_info->t_ms * 1000;
+				time_tv.tv_usec = rcv_info->t_ms * 1000;
 
 				if(settimeofday(&time_tv,NULL) < 0){
 					printf("Time Setting Failed!\n");
@@ -371,7 +367,6 @@ void set_system_time()
 		}
 		sleep(1);
 	}	
-	return NULL;
 }		
     
 /***********************************UDP网口通信**************/
