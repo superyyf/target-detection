@@ -349,6 +349,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			targetdata.t_m = target_time->tm_min;
 			targetdata.t_s = target_time->tm_sec;
 			targetdata.t_ms = time_tar.tv_usec/1000;	
+			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
 		else

@@ -109,6 +109,15 @@
 using namespace cv;
 using namespace std;
 
+struct TargetData{
+        unsigned short x;
+        unsigned short y;
+        int frame_num;
+        uint8_t t_h;
+        uint8_t t_m;
+        uint8_t t_s;
+        uint16_t t_ms;
+};
 
 static void user(char *mesg)
 {
@@ -185,6 +194,8 @@ int main(void)
 	printf("ydim           = %d\n", pxd_imageYdim());
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
+
+	set_system_time();
 
 	//int len1 = UART0_Send(fd, 1);
 	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
@@ -307,7 +318,8 @@ int main(void)
 			update_flag = false;
 		}
 
-		
+		TargetData targetdata;
+
 		//目标检测
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
@@ -317,12 +329,25 @@ int main(void)
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			//sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			//imwrite(filename, image_pro);
+			struct timeval time_tar;
+			gettimeofday(&time_tar,NULL);
+                        time_t time_tar_t = time_tar.tv_sec;
+                        struct tm *target_time = localtime(&time_tar_t);
+                        targetdata.t_h = target_time->tm_hour;
+                        targetdata.t_m = target_time->tm_min;
+                        targetdata.t_s = target_time->tm_sec;
+                        targetdata.t_ms = time_tar.tv_usec/1000;
+                        printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
+//imwrite(filename, image_pro);
 		}
 		else
 		{
 			x1 = 0;
 			y1 = 0;
+			targetdata.t_h = 0;
+			targetdata.t_m = 0;
+			targetdata.t_s = 0;
+			targetdata.t_ms = 0;
 		}
 		if (FrameNum % 50 == 0 && x1 == 0)
 		{
@@ -330,25 +355,21 @@ int main(void)
 			printf("****************************背景更新************************\n");
 		}
 
-		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-        	if(len == -1){    
-	
-                    	printf("cannot receive data\n");    
-                }    
+
+		targetdata.x = x1;
+		targetdata.y = y1;
+		targetdata.frame_num = FrameNum;
 		
 
 		//if(targetdata->x != 0){
 			SendInfo sendinfos;
-			sendinfos.f_num = rcv_info->f_num;
-			sendinfos.t_h = rcv_info->t_h;
-			sendinfos.t_m = rcv_info->t_m;
-			sendinfos.t_s = rcv_info->t_s;
-			sendinfos.t_ms = rcv_info->t_ms;
-			
-			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
-			sendinfos.x1 = x1;//targetdata->x;
-			sendinfos.y1 = y1;//targetdata->y;
+			sendinfos.f_num = targetdata.frame_num;
+			sendinfos.t_h = targetdata.t_h;
+			sendinfos.t_m = targetdata.t_m;
+			sendinfos.t_s = targetdata.t_s;
+			sendinfos.t_ms = targetdata.t_ms;
+			sendinfos.x1 = targetdata.x;
+			sendinfos.y1 = targetdata.y;
 			if(int set = sendto(sockClient, &sendinfos, sizeof(sendinfos), 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr)) < 0){
 				perror("UDP Error ");
 			}
@@ -356,9 +377,6 @@ int main(void)
 		
 	}
 
-
-	//int len2 = UART0_Send(fd, 0);
-	close(fd);
 	close(sockClient);//关闭socket
 	return 0;	
 }

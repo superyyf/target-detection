@@ -344,6 +344,7 @@ void set_system_time()
 				rcv_info->t_s >= 0 && rcv_info->t_s < 60 && 
 				rcv_info->t_ms >= 0 && rcv_info->t_ms < 1000 ){
 
+
 				struct tm *time_p = new struct tm();
 				struct timeval time_tv;
 				gettimeofday(&time_tv, NULL);
@@ -351,9 +352,11 @@ void set_system_time()
 				time_p->tm_min = rcv_info->t_m;
 				time_p->tm_sec = rcv_info->t_s;
 				time_t time_sec = mktime(time_p);
-				delete(time_p);
 				time_tv.tv_sec = time_sec;
-				time_tv.tv_usec = rcv_info->t_ms * 1000;
+				time_tv.tv_usec = rcv_info->t_ms * 10000;
+				printf("t_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d\n", time_p->tm_hour, time_p->tm_min, time_p->tm_sec, rcv_info->t_ms*10);
+
+				delete(time_p);
 
 				if(settimeofday(&time_tv,NULL) < 0){
 					printf("Time Setting Failed!\n");
