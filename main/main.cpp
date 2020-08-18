@@ -104,6 +104,7 @@
 #include <memory>
 #include "main.hpp"
 #include "queue.hpp"
+#include "timeconvert.hpp"
 
 #include<pthread.h>
 #include<chrono>
@@ -347,23 +348,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);
-			gettimeofday(&timeend,NULL);
-			unsigned long sec_t = timeend.tv_sec - timestart.tv_sec;
-			long usec_t = timeend.tv_usec - timestart.tv_usec + timeinti.tv_usec;
-			if(usec_t >= 0){
-				int a = usec_t/1000000;
-				time_ms = (sec_t % 1000000)/1000;
-				timefinal = timeinti.tv_sec + sec_t + a;
-			}
-			else{
-				timefinal = timeinti.tv_sec + sec_t - 1;
-				time_ms = (1000000+usec_t)/1000;
-			}
-			struct tm *target_time = localtime(&timefinal);
-			targetdata.t_h = target_time->tm_hour;
-			targetdata.t_m = target_time->tm_min;
-			targetdata.t_s = target_time->tm_sec;
-			targetdata.t_ms = time_ms;	
+			get_remote_time(&targetdata);
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
