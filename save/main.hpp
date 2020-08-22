@@ -55,14 +55,9 @@ struct DetectInfo {
     }  
 };
 
-struct SendData {
-    uint8_t t_h, t_m, t_s;
-    uint16_t t_ms; //unit: 1ms
-};
-
 void init_time(const struct ReceiveInfo *recv);
 
-void get_remote_time(struct SendData *send);
+void get_remote_time(struct TargetData *send);
 
 vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80);
 
@@ -77,7 +72,7 @@ void open_video_flow(int fd);
 
 void close_video_flow(int fd);
 
-void set_system_time();
+void set_system_time(struct timeval *t);
     
 
 #endif /* ifndef MAIN_HPP */

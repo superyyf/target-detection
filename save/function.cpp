@@ -1,19 +1,4 @@
 #include"main.hpp"
-#include<stdio.h>      /*标准输入输出定义*/    
-#include<stdlib.h>     /*标准函数库定义*/    
-#include<unistd.h>     /*Unix 标准函数定义*/    
-#include<sys/types.h>     
-#include<sys/stat.h>       
-#include<fcntl.h>      /*文件控制定义*/    
-#include<termios.h>    /*PPSIX 终端控制定义*/    
-#include<errno.h>      /*错误号定义*/    
-#include<string.h>
-#include<vector>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include<opencv2/imgproc/imgproc_c.h>
-#include <cv.h>
 
 using namespace std;
 using namespace cv;
@@ -21,7 +6,6 @@ using namespace cv;
 
 struct timespec init_time_remote;
 struct timespec init_time_local;
-
 
 //timestamp: years:months:days:hours:minutes:seconds
 void init_time(const struct ReceiveInfo *recv) {
@@ -62,7 +46,7 @@ struct SendData timeconvert(const struct timespec *s) {
     return ret;
 }
 
-void get_remote_time(struct SendData *send) {
+void get_remote_time(struct TargetData *send) {
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
     struct timespec diff = timediff(&init_time_local, &now);
@@ -71,7 +55,7 @@ void get_remote_time(struct SendData *send) {
 }
 
 /*目标检测*/
-vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
+vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80) {
 	Mat imgFront,imglabel, stats, centroids;
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	absdiff(img, background, imgFront);
@@ -339,7 +323,6 @@ void open_video_flow(int fd)
 		}
 		sleep(1);
 	}
-	return;
 }
 
 void close_video_flow(int fd)
@@ -362,10 +345,10 @@ void close_video_flow(int fd)
 }
 
 
-void set_system_time()
+void set_system_time(struct timeval *t)
 {
 	int fd = serialport_inti();
-	char rcv_buf[7];
+	char rcv_buf[10];
 	ReceiveInfo *rcv_info;
 	open_video_flow(fd);
 	
@@ -381,13 +364,14 @@ void set_system_time()
 				rcv_info->t_m >= 0 && rcv_info->t_m < 60 && 
 				rcv_info->t_s >= 0 && rcv_info->t_s < 60 && 
 				rcv_info->t_ms >= 0 && rcv_info->t_ms < 1000 ){
-				printf("t_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d\n", rcv_info->t_h, rcv_info->t_m, rcv_info->t_s, rcv_info->t_ms*10);
+				printf("t_h : %d\nt_m : %d\nt_s : %d\nt_ms : %d\n", time_p->tm_hour, time_p->tm_min, time_p->tm_sec, rcv_info->t_ms*10);
 				init_time(rcv_info);
 				printf("Set Time Sucessed!\n");	
 				close(fd);
 				break;
+				}
 			}
 		}
 		sleep(1);
-	}
+	}	
 }		

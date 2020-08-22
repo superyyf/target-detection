@@ -325,14 +325,12 @@ int main(void)
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			//sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			struct timeval time_tar;
-			gettimeofday(&time_tar,NULL);
-                        time_t time_tar_t = time_tar.tv_sec;
-                        struct tm *target_time = localtime(&time_tar_t);
-                        targetdata.t_h = target_time->tm_hour;
-                        targetdata.t_m = target_time->tm_min;
-                        targetdata.t_s = target_time->tm_sec;
-                        targetdata.t_ms = time_tar.tv_usec/1000;
+			SendData sendata;
+			get_remote_time(&sendata);
+                        targetdata.t_h = sendata.t_h;
+                        targetdata.t_m = sendata.t_m;
+                        targetdata.t_s = sendata.t_s;
+                        targetdata.t_ms = sendata.t_ms;
                         printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 //imwrite(filename, image_pro);
 		}
@@ -357,7 +355,7 @@ int main(void)
 		targetdata.frame_num = FrameNum;
 		
 
-		//if(targetdata->x != 0){
+		if(targetdata.x != 0){
 			SendInfo sendinfos;
 			sendinfos.f_num = targetdata.frame_num;
 			sendinfos.t_h = targetdata.t_h;
@@ -369,7 +367,7 @@ int main(void)
 			if(int set = sendto(sockClient, &sendinfos, sizeof(sendinfos), 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr)) < 0){
 				perror("UDP Error ");
 			}
-		//}	
+		}	
 		
 	}
 	int fd1 = serialport_inti();

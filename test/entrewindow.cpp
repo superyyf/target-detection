@@ -102,7 +102,7 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include <memory>
-#include "main.hpp"
+#include "test.hpp"
 #include "queue.hpp"
 
 #include<pthread.h>
@@ -261,18 +261,18 @@ void *img_enhance_thread(Queue<ImageData> *q)
 			printf("**************************映射关系更新**********************\n");
 		}
 		
-		Mat dst_2(256, 320, CV_8UC1);
+		Mat dst_2(512, 640, CV_8UC1);
 		uchar * p_2 = NULL;
         	//uchar img_con[512*640];
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < 512; i++)
 		{
 			//获取第i行像素数组首指针
 			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i+AOI_Y);
+			p_1 = src.ptr<ushort>(i);
 			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
-			for (int j = 0; j < 320; j++)
+			for (int j = 0; j < 640; j++)
 			{
-				p_2[j] = transf_fun[p_1[j+AOI_X]];
+				p_2[j] = transf_fun[p_1[j]];
                         	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
@@ -309,7 +309,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	time_t timefinal;
 	unsigned short time_ms;
 	struct timeval start_2, end_2, time_end;
-	Mat img_back(256, 320, CV_8UC1);
+	Mat img_back(512, 640, CV_8UC1);
 	while(true)
 	{
 
@@ -340,8 +340,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		if(detect_infos.size())
 		{
 			target_count++;
-			x1 = AOI_X + (unsigned short)detect_infos[0].x;
-			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
+			x1 = (unsigned short)detect_infos[0].x;
+			y1 = (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);

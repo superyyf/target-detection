@@ -44,6 +44,15 @@ using namespace std;
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
+struct TargetData{
+        unsigned short x;
+        unsigned short y;
+        int frame_num;
+        uint8_t t_h;
+        uint8_t t_m;
+        uint8_t t_s;
+        uint16_t t_ms;
+};
 
 
 int main(){
@@ -68,10 +77,8 @@ int main(){
 	uchar transf_fun[16384] = { 0 };//映射关系数组
 	Mat img_back(256, 320, CV_8UC1);//背景
 
-	int fd = serialport_inti();//初始化串口
-	char rcv_buf[8];
-	ReceiveInfo *rcv_info;
-	
+	TargetData targetdata;
+	set_system_time();
 	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
 	if (sockClient == -1){
 		printf("socket error!");
@@ -161,6 +168,15 @@ int main(){
 			detect = 1;
 			sprintf(save_filename, "%s%d%s", save_prefix, target_count, save_postfix);
 			imwrite(save_filename, dst_2);
+			SendData sendata;
+			get_remote_time(&sendata);
+			targetdata.x = x1;
+			targetdata.y = y1;
+			targetdata.t_h = sendata.t_h;
+			targetdata.t_m = sendata.t_m;
+			targetdata.t_s = sendata.t_s;
+			targetdata.t_ms = sendata.t_ms;
+			targetdata.frame_num = k;
 		}
 		else
 		{
@@ -179,21 +195,15 @@ int main(){
 		end_2 = clock();
 		printf("--------------------Image Process = %fs-----------------------------------\n", double(end_2 - start_2)/CLOCKS_PER_SEC);
 
-		int len = UART0_Recv(fd, rcv_buf,sizeof(ReceiveInfo));    
-		rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
-        	if(len == -1){    
-	
-                    	printf("cannot receive data\n");    
-                }    
 		
 
 		if(x1 != 0){
 			SendInfo sendinfos;
-			sendinfos.f_num = rcv_info->f_num;
-			sendinfos.t_h = rcv_info->t_h;
-			sendinfos.t_m = rcv_info->t_m;
-			sendinfos.t_s = rcv_info->t_s;
-			sendinfos.t_ms = rcv_info->t_ms;
+			sendinfos.f_num = targetdata.frame_num;
+			sendinfos.t_h = targetdata.t_h;
+			sendinfos.t_m = targetdata.t_m;
+			sendinfos.t_s = targetdata.t_s;
+			sendinfos.t_ms = targetdata.t_ms;
 			sendinfos.x1 = x1;//targetdata->x;
 			sendinfos.y1 = y1;//targetdata->y;
 			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
