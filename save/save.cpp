@@ -238,7 +238,7 @@ void *get_image_thread(Queue<CamData> *c)
 		}
 		if(end_flag)
 		{
-			pthread_exit(NULL);
+			break;
 		}
 		gettimeofday(&end_1, NULL);
                 printf("Read Image = %fms-------------------------------------------------------\n", (double)(end_1.tv_usec - start_1.tv_usec)/1000);
@@ -295,7 +295,11 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
-	signal(SIGINT, sign_handle);
+	struct sigaction signinfo;
+	signinfo.sa_handler = sign_handle;
+	signinfo.sa_flags = SA_RESETHAND;
+	sigemptyset(&signinfo.sa_mask);
+	sigaction(SIGINT, &signinfo, NULL);
 	Queue<CamData> c;
 	pthread_t t1, t2, t3;
 	pthread_create(&t1, NULL, (THREAD_FUNC)get_image_thread, &c);	
