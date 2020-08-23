@@ -1,4 +1,4 @@
-#include"test.hpp"
+#include"main.hpp"
 #include<stdio.h>      /*标准输入输出定义*/    
 #include<stdlib.h>     /*标准函数库定义*/    
 #include<unistd.h>     /*Unix 标准函数定义*/    
@@ -339,6 +339,7 @@ void open_video_flow(int fd)
 		}
 		sleep(1);
 	}
+	return;
 }
 
 void close_video_flow(int fd)
@@ -364,7 +365,7 @@ void close_video_flow(int fd)
 void set_system_time()
 {
 	int fd = serialport_inti();
-	char rcv_buf[10];
+	char rcv_buf[7];
 	ReceiveInfo *rcv_info;
 	open_video_flow(fd);
 	
@@ -373,6 +374,7 @@ void set_system_time()
         	if(len < 0){    
 	
                     	printf("Cannot Receive Data!\n");    
+			open_video_flow(fd);
                 }    
 		else{
 			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);

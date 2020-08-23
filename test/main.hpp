@@ -25,7 +25,7 @@
 using namespace std;
 using namespace cv;
 
-struct ReceiveInfo {
+struct ReceiveInfo {//北斗数据
         uint8_t flag1;
         uint8_t f_num;
         uint8_t t_h;
@@ -35,7 +35,7 @@ struct ReceiveInfo {
  	uint8_t flag2;    
 } __attribute__((packed));
 
-struct SendInfo {
+struct SendInfo {//发送给上位机的数据
         uint8_t flag1 = 0xAB;
 	uint8_t f_num;
         uint8_t t_h;
@@ -47,7 +47,7 @@ struct SendInfo {
 	uint8_t flag2 = 0xBB;    
 } __attribute__((packed));
 
-struct DetectInfo {
+struct DetectInfo {//目标信息
     double x,y;
     int area;
     friend bool operator>(const DetectInfo &d1, const DetectInfo &d2) {
@@ -55,29 +55,29 @@ struct DetectInfo {
     }  
 };
 
-struct SendData {
+struct SendData {//时间信息
     uint8_t t_h, t_m, t_s;
     uint16_t t_ms; //unit: 1ms
 };
 
-void init_time(const struct ReceiveInfo *recv);
+void init_time(const struct ReceiveInfo *recv);//初始化时间
 
-void get_remote_time(struct SendData *send);
+void get_remote_time(struct SendData *send);//时间换算
 
-vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80);
+vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80);//目标检测
 
-int UART0_Recv(int fd, char *rcv_buf,int data_len);    
+int UART0_Recv(int fd, char *rcv_buf,int data_len);//串口接收    
 
-bool UART0_Send(int fd);    
+bool UART0_Send(int fd);//串口发送
 
  
-int serialport_inti();
+int serialport_inti();//串口初始化
 
-void open_video_flow(int fd);
+void open_video_flow(int fd);//开启北斗和视频流
 
-void close_video_flow(int fd);
+void close_video_flow(int fd);//关闭北斗和视频流
 
-void set_system_time();
+void set_system_time();//北斗对时
     
 
 #endif /* ifndef MAIN_HPP */
