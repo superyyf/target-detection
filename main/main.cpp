@@ -188,6 +188,12 @@ static void hello(void)
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
 
+bool end_flag = false;
+void sign_handle(int sign)
+{
+	end_flag = true;
+}
+
 
 void *img_enhance_thread(Queue<ImageData> *q)
 {
@@ -285,6 +291,12 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
+
+		if(end_flag)
+		{
+			break;
+		}
+
 		gettimeofday(&end_1, NULL);
 		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
 	
@@ -448,6 +460,12 @@ int main(void)
 	
 
 	set_system_time();
+
+	struct sigaction signinfo;
+	signinfo.sa_handler = sign_handle;
+	signinfo.sa_flags = SA_RESETHAND;
+	sigemptyset(&signinfo.sa_mask);
+	sigaction(SIGINT, &signinfo, NULL);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;

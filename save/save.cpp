@@ -245,6 +245,7 @@ void *get_image_thread(Queue<CamData> *c)
 		printf("-----------------------------------------------------------------------Frame = %d\n", FrameNum);
 	}
 	c->end();
+	c->end();
 	do_close();
 	return NULL;
 }
