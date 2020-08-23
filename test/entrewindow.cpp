@@ -102,7 +102,7 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include <memory>
-#include "test.hpp"
+#include "main.hpp"
 #include "queue.hpp"
 
 #include<pthread.h>
@@ -188,6 +188,14 @@ static void hello(void)
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
 
+uchar transf_fun[16384] = { 0 };//映射关系数组
+
+bool end_flag = false;
+void sign_handle(int sign)
+{
+	end_flag = true;
+}
+
 
 void *img_enhance_thread(Queue<ImageData> *q)
 {
@@ -205,8 +213,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	int nc = 640;//列
 	int total = nr*nc;//像素数
 	int FrameNum = 0; //帧数
-	uchar transf_fun[16384] = { 0 };//映射关系数组
-
+	namedWindow("Frame");
 
 	//pxd_doSnap(UNITSMAP, 1, 0); //保存单张图片
 	//pxd_readushort函数捕捉16bits数据到缓冲区，成功i>0,i<0失败，函数中止运行
@@ -230,38 +237,9 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}
 		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
 		Mat src(YDIM, XDIM, CV_16UC1, colorimage_buf1);//原始图像
-		//Mat src_win = src(Rect( AOI_X, AOI_Y, AOI_WIDTH, AOI_HIGH));	
-	//---------------------------16bits 图像直方图均衡化----------------------------------//
-
-		ushort *p_1 = NULL;
-		if (FrameNum % 80 == 0)//每50帧更新一次映射关系
-		{
-			//存储直方图统计结果的数组
-			unsigned int hist[16384] = { 0 };
-			//扫描原图像
-			for (int i = 0; i < nr; i++)
-			{
-				//获取第i行像素数组首指针
-				p_1 = src.ptr<ushort>(i);
-				for (int j = 0; j < nc; j++)
-				{
-					hist[p_1[j]] ++;
-				}
-			}
-
-			//计算灰度变换函数
-			//transf_fun存储均衡前像素值与均衡后像素值的映射关系
-			transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
-			//累积
-			for (int i = 1; i < 16384; i++)
-			{
-				hist[i] = hist[i - 1] + hist[i];
-				transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
-			}
-			printf("**************************映射关系更新**********************\n");
-		}
 		
 		Mat dst_2(512, 640, CV_8UC1);
+		ushort *p_1 = NULL;
 		uchar * p_2 = NULL;
         	//uchar img_con[512*640];
 		for (int i = 0; i < 512; i++)
@@ -276,15 +254,19 @@ void *img_enhance_thread(Queue<ImageData> *q)
                         	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
-		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
-		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		imshow("Frame",dst_2);
-		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
+		imshow("Frame",imgdata.image);
+		waitKey(5);
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
+
+		if(end_flag)//信号标志位
+		{
+			break;
+		}
+
 		gettimeofday(&end_1, NULL);
 		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
 	
@@ -296,12 +278,14 @@ void *img_enhance_thread(Queue<ImageData> *q)
 }
 
 
+
 void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
 	char prefix[] = "/home/nvidia/pic/target_";
 	char postfix[] = ".png";
 	char filename[255];
 	int target_count = 0;
+	int detect_num = 0;
 
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
@@ -339,25 +323,27 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
+			detect_num++;
 			target_count++;
 			x1 = (unsigned short)detect_infos[0].x;
 			y1 = (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
 			imwrite(filename, image_pro);
-			SendData sendata;
-			get_remote_time(&sendata);
-			targetdata.t_h = sendata.t_h;
-			targetdata.t_m = sendata.t_m;
-			targetdata.t_s = sendata.t_s;
-			targetdata.t_ms = sendata.t_ms;
-			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
+			//SendData sendata;
+			//get_remote_time(&sendata);
+			//targetdata.t_h = sendata.t_h;
+			//targetdata.t_m = sendata.t_m;
+			//targetdata.t_s = sendata.t_s;
+			//targetdata.t_ms = sendata.t_ms;
+			//printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
 		else
 		{
 			x1 = 0;
 			y1 = 0;
+			detect_num = 0;
 		}
 		
 		targetdata.x = x1;
@@ -366,7 +352,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		p1->output->push(move(targetdata));
 		//背景更新
 		printf("************************frame_num = %d***********************\n",frame_num);
-		if (frame_num % 50 == 0 && x1 == 0)
+		if ((frame_num % 50 == 0 && x1 == 0) | detect_num >= 50)
 		{
 			img_back = image_pro.clone();
 			printf("****************************背景更新************************\n");
@@ -376,6 +362,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		printf("--------------------Image Process = %fms-----------------------------------\n", (double)(end_2.tv_usec - start_2.tv_usec)/1000);
 	}
 	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
+	p1->output->end();
 	return NULL;
 }
 
@@ -412,7 +399,7 @@ void *send_data_thread(Queue<TargetData> *t)
 			sendinfos.t_s = targetdata->t_s;
 			sendinfos.t_ms = targetdata->t_ms;
 			
-			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
+			//printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
 			sendinfos.x1 = targetdata->x;
 			sendinfos.y1 = targetdata->y;
 			if(int set = sendto(sockClient, &sendinfos, sizeof(sendinfos), 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr)) < 0){
@@ -427,6 +414,70 @@ void *send_data_thread(Queue<TargetData> *t)
 	close(sockClient);//关闭socket
 	return NULL;
 }
+
+void compute_map()
+{
+	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
+	//设置AOI感兴趣区域，一般不要修改
+	int     i = 0;
+	int     j = 0;
+	int     cx = 0;	// left coordinate of centered AOI
+	int     cy = 0;	// top	coordinate of centered AOI
+	int nr = 512;//行
+	int nc = 640;//列
+	int total = nr*nc;//像素数
+	
+	int FrameNum = 0;
+	pxd_goLive(UNITSMAP, 1);
+	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
+
+	struct timeval start_1, end_1, start_p;
+	gettimeofday(&start_1, NULL);
+	while (pxd_goneLive(UNITSMAP, 0))//capture picture
+	{
+		gettimeofday(&start_p, NULL);
+		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != XDIM * YDIM*COLORS) {/*xiugai*/
+			if (i < 0)
+				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
+			else
+				printf("pxd_readuchar error: %d != %d\n", i, XDIM*YDIM * 3);
+			user("");
+			break;
+		}
+		//将colorimage_buf1中的16bits数据赋值给Mat矩阵
+		Mat src(YDIM, XDIM, CV_16UC1, colorimage_buf1);//原始图像
+		FrameNum++;
+		ushort *p_1 = NULL;
+		if (FrameNum  == 1000)//每50帧更新一次映射关系
+		{
+			//存储直方图统计结果的数组
+			unsigned int hist[16384] = { 0 };
+			//扫描原图像
+			for (int i = 0; i < nr; i++)
+			{
+				//获取第i行像素数组首指针
+				p_1 = src.ptr<ushort>(i);
+				for (int j = 0; j < nc; j++)
+				{
+					hist[p_1[j]] ++;
+				}
+			}
+
+			//计算灰度变换函数
+			//transf_fun存储均衡前像素值与均衡后像素值的映射关系
+			transf_fun[0] = (uchar)(255 * (hist[0] * 1.0) / (total*1.0));
+			//累积
+			for (int i = 1; i < 16384; i++)
+			{
+				hist[i] = hist[i - 1] + hist[i];
+				transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
+			}
+			printf("**************************映射关系初始化**********************\n");
+			break;
+		}
+	}
+}
+
 int main(void)
 {
 	// Say Hello
@@ -447,7 +498,15 @@ int main(void)
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
 
-	set_system_time();
+	//set_system_time();
+
+	compute_map();
+
+	struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
+	signinfo.sa_handler = sign_handle;
+	signinfo.sa_flags = SA_RESETHAND;
+	sigemptyset(&signinfo.sa_mask);
+	sigaction(SIGINT, &signinfo, NULL);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
