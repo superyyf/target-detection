@@ -374,6 +374,7 @@ void set_system_time()
         	if(len < 0){    
 	
                     	printf("Cannot Receive Data!\n");    
+			open_video_flow(fd);
                 }    
 		else{
 			rcv_info = reinterpret_cast<ReceiveInfo *>(rcv_buf);
