@@ -102,12 +102,37 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include <memory>
-#include "test.hpp"
+#include "main.hpp"
+#include "queue.hpp"
+
 #include<pthread.h>
+#include<chrono>
 
 using namespace cv;
 using namespace std;
 
+typedef void *(*THREAD_FUNC)(void *);
+
+struct ImageData {
+	Mat image;
+	int frame_num;
+};
+
+struct TargetData{
+	unsigned short x;
+	unsigned short y;
+	int frame_num;
+	uint8_t t_h;
+	uint8_t t_m;
+	uint8_t t_s;
+	uint16_t t_ms;
+};
+
+template<typename Input, typename Output> struct Pipe{
+	Queue<Input> *input;
+	Queue<Output> *output;
+	Pipe(Queue<Input> *a, Queue<Output> *b):input(a), output(b){}
+};
 
 static void user(char *mesg)
 {
@@ -163,53 +188,11 @@ static void hello(void)
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
 
-int mouse_on = 0;
-int mouse_click = 0;
-int i_cen = YDIM / 2;
-int j_cen = XDIM /2;
-int img_x = 0;
-int img_y = 0;
 
-void on_mouse(int event, int x, int y, int flags, void* ustc)
+void *img_enhance_thread(Queue<ImageData> *q)
 {
-	CvFont font;
-	cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA);
-
-	if (event == CV_EVENT_LBUTTONDOWN)
-	{
-		CvPoint pt = cvPoint(x, y);
-		char temp[16];
-		sprintf(temp, "(%d,%d)", pt.x, pt.y);
-		img_x = pt.x;
-		img_y = pt.y;
-
-		printf("\n=========================\n");
-                printf("x坐标 = %d\n", img_x);
-                printf("y坐标 = %d\n\n", img_y);
-		printf("AOI_X = %d\nAOI_Y = %d\n", img_x-160, img_y-128);
-	}
-}
-
-
-int main(void)
-{
-	// Say Hello
-	//判断是否xclib与相机连接成功
-	hello();
-	//pxd_PIXCIopen函数很重要，注意函数内部文件路径的格式，.fmt文件如何保存
-	pxd_PIXCIopen("", "", "/home/nvidia/Desktop/try1/ddd14.fmt");//important
-	//pxd_PIXCIopen("", "", "/home/nvidia/Desktop/histeq_detect_udp/ddd_1024.fmt");//important
-	printf("Image frame buffer memory size: %.3f Kbytes\n", (double)pxd_infoMemsize(UNITSMAP) / 1024);
-	printf("Image frame buffers           : %d\n", pxd_imageZdim());
-	printf("Number of boards              : %d\n", pxd_infoUnits());
-
-	printf("Frame Grabber %d\n", pxd_infoModel(UNITSMAP));
-
-	printf("xdim           = %d\n", pxd_imageXdim());
-	printf("ydim           = %d\n", pxd_imageYdim());
-	printf("colors         = %d\n", pxd_imageCdim());
-	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
+
 	//定义存储16bits前景图像的缓冲区
 	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
 	//设置AOI感兴趣区域，一般不要修改
@@ -232,8 +215,11 @@ int main(void)
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
+	struct timeval start_1, end_1, start_p;
+	gettimeofday(&start_1, NULL);
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
+		gettimeofday(&start_p, NULL);
 		if ((i = pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey")) != XDIM * YDIM*COLORS) {/*xiugai*/
 			if (i < 0)
 				printf("pxd_readuchar: %s\n", pxd_mesgErrorCode(i));
@@ -272,69 +258,222 @@ int main(void)
 				hist[i] = hist[i - 1] + hist[i];
 				transf_fun[i] = (uchar)(255 * (hist[i] * 1.0) / (total*1.0));
 			}
+			printf("**************************映射关系更新**********************\n");
 		}
 		
-		Mat dst_2(512, 640, CV_8UC1);
+		Mat dst_2(256, 320, CV_8UC1);
 		uchar * p_2 = NULL;
         	//uchar img_con[512*640];
-		for (int i = 0; i < 512; i++)
+		for (int i = 0; i < 256; i++)
 		{
 			//获取第i行像素数组首指针
 			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i);
+			p_1 = src.ptr<ushort>(i+AOI_Y);
 			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
-			for (int j = 0; j < 640; j++)
+			for (int j = 0; j < 320; j++)
 			{
-				p_2[j] = transf_fun[p_1[j]];
+				p_2[j] = transf_fun[p_1[j+AOI_X]];
                         	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		//-------------------------------十字线叠加------------------------
-		for (int i = -256; i < 256; i++)
-		{
-			dst_2.at<uchar>(i_cen + i, j_cen) = 255;
-
-		}
-		for(int j = -320; j < 320; j++)
-		{
-			dst_2.at<uchar>(i_cen , j_cen + j) = 255;
-		}
-		Mat img = dst_2.clone();
-
-	imshow("img",img);
-	cvWaitKey(1);
-        cvSetMouseCallback("img", on_mouse, 0);
-
-//-----------------------------------------抠图----------------------------------------------
-		if (img_x != 0 && img_y != 0)
-		{
-
-			int x_offset = img_x - 160;
-			int y_offset = img_y - 128;
-			Mat img_windows(256, 320, CV_8UC1);
-			for (int i = 0; i < 256; i++)
-				for (int j = 0; j < 320; j++)
-				{
-					int x_real = x_offset + j;
-					int y_real = y_offset + i;
-					if (x_real <= 0 || y_real <= 0 || x_real >= 640 || y_real >= 512)
-					{
-						img_windows.at<uchar>(i, j) = 0;
-					}
-					else
-					{
-						img_windows.at<uchar>(i, j) = img.at<uchar>(i, j);
-					}
-				}
+		imshow("Frame",dst_2);
+		cvWaitKey(1);
+		FrameNum++;
+		ImageData imgdata;
+		imgdata.image = dst_2.clone();
+		imgdata.frame_num = FrameNum;
+		q->push(move(imgdata));
+		gettimeofday(&end_1, NULL);
+		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
 	
-			imshow("img_windows", img_windows);
-
-		}
 	}
+	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
+	q->end();
+	do_close();//关闭视频流
+	return NULL;
+}
+
+
+void *image_process_thread(Pipe<ImageData, TargetData> *p1)
+{
+	char prefix[] = "/home/nvidia/pic/target_";
+	char postfix[] = ".png";
+	char filename[255];
+	int target_count = 0;
+
+	unsigned short x1 = 0;
+	unsigned short y1 = 0;
+	bool update_flag = true;
+	struct timeval start_2, end_2, time_end, time_target;
+	struct tm* tm_target;
+	Mat img_back(256, 320, CV_8UC1);
+	while(true)
+	{
+
+		unique_ptr<ImageData> imgdata;
+		imgdata = p1->input->pop();
+
+		gettimeofday(&start_2, NULL);
+		if(imgdata == NULL)
+		{
+			p1->output->end();
+			break;
+		}
+		Mat image_pro = imgdata->image;
+		int frame_num = imgdata->frame_num;
+		 
+		//背景初始化
+		if(update_flag)
+		{
+			img_back = image_pro.clone();
+			printf("\n--------------------------------------背景初始化-----------------------------\n");
+			update_flag = false;
+		}
+
+		TargetData targetdata;
+
+		//目标检测
+		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
+		if(detect_infos.size())
+		{
+			target_count++;
+			x1 = AOI_X + (unsigned short)detect_infos[0].x;
+			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
+			printf("Target : [ %d , %d ]\n", x1, y1);
+			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
+			imwrite(filename, image_pro);
+			
+			gettimeofday(&time_target, NULL);
+		        tm_target = localtime(&time_target.tv_sec);
+			targetdata.t_h = tm->tm_hour;
+			targetdata.t_m = tm->tm_min;
+			targetdata.t_s = tm->tm_sec;
+			targetdata.t_ms = time_target.tv_usec/1000;
+			//SendData sendata;
+			//get_remote_time(&sendata);
+			//targetdata.t_h = sendata.t_h;
+			//targetdata.t_m = sendata.t_m;
+			//targetdata.t_s = sendata.t_s;
+			//targetdata.t_ms = sendata.t_ms;
+
+			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
+			
+		}
+		else
+		{
+			x1 = 0;
+			y1 = 0;
+		}
+		
+		targetdata.x = x1;
+		targetdata.y = y1;
+		targetdata.frame_num = frame_num;
+		p1->output->push(move(targetdata));
+		//背景更新
+		printf("************************frame_num = %d***********************\n",frame_num);
+		if (frame_num % 50 == 0 && x1 == 0)
+		{
+			img_back = image_pro.clone();
+			printf("****************************背景更新************************\n");
+		}
+		
+		gettimeofday(&end_2, NULL);
+		printf("--------------------Image Process = %fms-----------------------------------\n", (double)(end_2.tv_usec - start_2.tv_usec)/1000);
+	}
+	printf("\n------------------------------------------结束目标检测线程----------------------------------\n");
+	return NULL;
+}
+
+
+void *send_data_thread(Queue<TargetData> *t)
+{
+			
+	//初始化套接字init socket 	
+	
+	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
+	if (sockClient == -1){
+		printf("socket error!");
+		return NULL;
+	}
+	struct sockaddr_in addrSrv;
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
+	addrSrv.sin_family = AF_INET;
+	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
+	struct timeval start_3, end_3;
+	while(true){
+		gettimeofday(&start_3, NULL);
+		unique_ptr<TargetData> targetdata;
+		targetdata = t->pop();
+		
+		if(targetdata == NULL){
+			break;
+		}
+
+		if(targetdata->x != 0){
+			SendInfo sendinfos;
+			sendinfos.f_num = targetdata->frame_num;
+			sendinfos.t_h = targetdata->t_h;
+			sendinfos.t_m = targetdata->t_m;
+			sendinfos.t_s = targetdata->t_s;
+			sendinfos.t_ms = targetdata->t_ms;
+			
+			printf("f_num : %d\nt_h : %d\nt_m : %d\nt_s : %d\nms : %d\n", sendinfos.f_num, sendinfos.t_h, sendinfos.t_m, sendinfos.t_s, sendinfos.t_ms);
+			sendinfos.x1 = targetdata->x;
+			sendinfos.y1 = targetdata->y;
+			if(int set = sendto(sockClient, &sendinfos, sizeof(sendinfos), 0, (struct sockaddr*)&addrSrv, sizeof(struct sockaddr)) < 0){
+				perror("UDP Error ");
+			}
+				
+		}
+		gettimeofday(&end_3, NULL);
+		printf("----------------------------------------------Send Data = %fms\n", (double)(end_3.tv_usec - start_3.tv_usec)/1000);
+	}
+	printf("\n------------------------------------------结束发送线程-----------------------------------------\n");
+	close(sockClient);//关闭socket
+	return NULL;
+}
+int main(void)
+{
+	// Say Hello
+	//判断是否xclib与相机连接成功
+	hello();
+	//pxd_PIXCIopen函数很重要，注意函数内部文件路径的格式，.fmt文件如何保存
+	pxd_PIXCIopen("", "", "/home/nvidia/Desktop/try1/ddd14.fmt");//important
+	//pxd_PIXCIopen("", "", "/home/nvidia/Desktop/histeq_detect_udp/ddd_1024.fmt");//important
+	printf("Image frame buffer memory size: %.3f Kbytes\n", (double)pxd_infoMemsize(UNITSMAP) / 1024);
+	printf("Image frame buffers           : %d\n", pxd_imageZdim());
+	printf("Number of boards              : %d\n", pxd_infoUnits());
+
+	printf("Frame Grabber %d\n", pxd_infoModel(UNITSMAP));
+
+	printf("xdim           = %d\n", pxd_imageXdim());
+	printf("ydim           = %d\n", pxd_imageYdim());
+	printf("colors         = %d\n", pxd_imageCdim());
+	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
+	
+
+	//set_system_time();
+
+	Queue<ImageData> imagedata;
+	Queue<TargetData> targetdata;
+	Pipe<ImageData, TargetData> p1(&imagedata, &targetdata);
+
+	pthread_t t1, t2, t3;
+	pthread_create(&t1, NULL, (THREAD_FUNC)img_enhance_thread, &imagedata);
+	pthread_create(&t2, NULL, (THREAD_FUNC)image_process_thread, &p1);
+	pthread_create(&t3, NULL, (THREAD_FUNC)send_data_thread, &targetdata); 
+
+	pthread_join(t1, NULL);
+	pthread_join(t2, NULL);
+	pthread_join(t3, NULL);
+
+	int fd1 = serialport_inti();//初始化串口
+	close_video_flow(fd1);
 	return 0;	
 }
+
 
 
 
