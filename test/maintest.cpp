@@ -102,7 +102,7 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include <memory>
-#include "test.hpp"
+#include "main.hpp"
 
 #include<pthread.h>
 
@@ -195,7 +195,7 @@ int main(void)
 	printf("colors         = %d\n", pxd_imageCdim());
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 
-	set_system_time();
+	//set_system_time();
 
 	//int len1 = UART0_Send(fd, 1);
 	static ushort   colorimage_buf1[YDIM*XDIM*COLORS];
@@ -214,6 +214,7 @@ int main(void)
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
 	bool update_flag = true;
+	int detect_num = 0;
 	
 	int sockClient = socket(AF_INET, SOCK_DGRAM, 0);//初始化socket
 	if (sockClient == -1){
@@ -320,22 +321,24 @@ int main(void)
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
 		if(detect_infos.size())
 		{
+			detect_num++;
 			//target_count++;
 			x1 = AOI_X + (unsigned short)detect_infos[0].x;
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			//sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			SendData sendata;
-			get_remote_time(&sendata);
-                        targetdata.t_h = sendata.t_h;
-                        targetdata.t_m = sendata.t_m;
-                        targetdata.t_s = sendata.t_s;
-                        targetdata.t_ms = sendata.t_ms;
-                        printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
+			//SendData sendata;
+			//get_remote_time(&sendata);
+                        //targetdata.t_h = sendata.t_h;
+                        //targetdata.t_m = sendata.t_m;
+                        //targetdata.t_s = sendata.t_s;
+                        //targetdata.t_ms = sendata.t_ms;
+                        //printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 //imwrite(filename, image_pro);
 		}
 		else
 		{
+			detect_num = 0;
 			x1 = 0;
 			y1 = 0;
 			targetdata.t_h = 0;
@@ -343,7 +346,7 @@ int main(void)
 			targetdata.t_s = 0;
 			targetdata.t_ms = 0;
 		}
-		if (FrameNum % 50 == 0 && x1 == 0)
+		if ((FrameNum % 50 == 0 && x1 == 0) | detect_num >=50 )
 		{
 			img_back = image_pro.clone();
 			printf("****************************背景更新************************\n");

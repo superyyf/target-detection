@@ -188,6 +188,12 @@ static void hello(void)
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
 
+bool end_flag = false;
+void sign_handle(int sign)
+{
+	end_flag = true;
+}
+
 
 void *img_enhance_thread(Queue<ImageData> *q)
 {
@@ -234,7 +240,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 
 		ushort *p_1 = NULL;
-		if (FrameNum % 80 == 0)//每50帧更新一次映射关系
+		if (FrameNum % 80 == 0)//每80帧更新一次映射关系
 		{
 			//存储直方图统计结果的数组
 			unsigned int hist[16384] = { 0 };
@@ -285,6 +291,12 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
+
+		if(end_flag)//信号标志位
+		{
+			break;
+		}
+
 		gettimeofday(&end_1, NULL);
 		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
 	
@@ -301,11 +313,12 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	char prefix[] = "/home/nvidia/pic/target_";
 	char postfix[] = ".png";
 	char filename[255];
-	int target_count = 0;
+	int target_count = 0;//总目标计数
+	int detect_num = 0;//连续目标计数
 
-	unsigned short x1 = 0;
+	unsigned short x1 = 0;//目标坐标
 	unsigned short y1 = 0;
-	bool update_flag = true;
+	bool update_flag = true;//背景初始化标志位
 	time_t timefinal;
 	unsigned short time_ms;
 	struct timeval start_2, end_2, time_end;
@@ -314,10 +327,10 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	{
 
 		unique_ptr<ImageData> imgdata;
-		imgdata = p1->input->pop();
+		imgdata = p1->input->pop();//从队列中取出数据
 
 		gettimeofday(&start_2, NULL);
-		if(imgdata == NULL)
+		if(imgdata == NULL)//线程退出条件
 		{
 			p1->output->end();
 			break;
@@ -337,14 +350,15 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 
 		//目标检测
 		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
-		if(detect_infos.size())
+		if(detect_infos.size())//有目标
 		{
 			target_count++;
+			detect_num++;
 			x1 = AOI_X + (unsigned short)detect_infos[0].x;
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
 			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			imwrite(filename, image_pro);
+			imwrite(filename, image_pro);//保存带目标图像
 			SendData sendata;
 			get_remote_time(&sendata);
 			targetdata.t_h = sendata.t_h;
@@ -354,19 +368,20 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
-		else
+		else//无目标
 		{
 			x1 = 0;
 			y1 = 0;
+			detect_num = 0;
 		}
 		
 		targetdata.x = x1;
 		targetdata.y = y1;
 		targetdata.frame_num = frame_num;
-		p1->output->push(move(targetdata));
+		p1->output->push(move(targetdata));//将目标信息放入队列
 		//背景更新
 		printf("************************frame_num = %d***********************\n",frame_num);
-		if (frame_num % 50 == 0 && x1 == 0)
+		if ((frame_num % 50 == 0 && x1 == 0) | detect_num >= 50 )//背景更新条件：原则上50帧更新一次，有目标不更新，连续50帧出现目标更新
 		{
 			img_back = image_pro.clone();
 			printf("****************************背景更新************************\n");
@@ -391,20 +406,20 @@ void *send_data_thread(Queue<TargetData> *t)
 		return NULL;
 	}
 	struct sockaddr_in addrSrv;
-	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
 	struct timeval start_3, end_3;
 	while(true){
 		gettimeofday(&start_3, NULL);
-		unique_ptr<TargetData> targetdata;
+		unique_ptr<TargetData> targetdata;//从队列中取出目标信息
 		targetdata = t->pop();
 		
-		if(targetdata == NULL){
+		if(targetdata == NULL){//线程推出条件
 			break;
 		}
 
-		if(targetdata->x != 0){
+		if(targetdata->x != 0){//有目标则发送给上位机
 			SendInfo sendinfos;
 			sendinfos.f_num = targetdata->frame_num;
 			sendinfos.t_h = targetdata->t_h;
@@ -447,7 +462,13 @@ int main(void)
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
 
-	set_system_time();
+	set_system_time();//北斗对时
+
+	struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
+	signinfo.sa_handler = sign_handle;
+	signinfo.sa_flags = SA_RESETHAND;
+	sigemptyset(&signinfo.sa_mask);
+	sigaction(SIGINT, &signinfo, NULL);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
@@ -463,7 +484,7 @@ int main(void)
 	pthread_join(t3, NULL);
 
 	int fd1 = serialport_inti();//初始化串口
-	close_video_flow(fd1);
+	close_video_flow(fd1);//关闭视频流
 	return 0;	
 }
 
