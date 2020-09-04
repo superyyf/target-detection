@@ -347,9 +347,9 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			
 			gettimeofday(&time_target, NULL);
 		        tm_target = localtime(&time_target.tv_sec);
-			targetdata.t_h = tm->tm_hour;
-			targetdata.t_m = tm->tm_min;
-			targetdata.t_s = tm->tm_sec;
+			targetdata.t_h = tm_target->tm_hour;
+			targetdata.t_m = tm_target->tm_min;
+			targetdata.t_s = tm_target->tm_sec;
 			targetdata.t_ms = time_target.tv_usec/1000;
 			//SendData sendata;
 			//get_remote_time(&sendata);
@@ -366,6 +366,13 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			x1 = 0;
 			y1 = 0;
 		}
+			gettimeofday(&time_target, NULL);
+		        tm_target = localtime(&time_target.tv_sec);
+			targetdata.t_h = tm_target->tm_hour;
+			targetdata.t_m = tm_target->tm_min;
+			targetdata.t_s = tm_target->tm_sec;
+			targetdata.t_ms = time_target.tv_usec/1000;
+			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 		
 		targetdata.x = x1;
 		targetdata.y = y1;

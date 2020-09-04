@@ -102,7 +102,7 @@
 #include<opencv2/imgproc/imgproc_c.h>
 #include <cv.h>
 #include <memory>
-#include "test.hpp"
+#include "main.hpp"
 #include<pthread.h>
 
 using namespace cv;
@@ -294,12 +294,12 @@ int main(void)
 		//-------------------------------十字线叠加------------------------
 		for (int i = -256; i < 256; i++)
 		{
-			dst_2.at<uchar>(i_cen + i, j_cen) = 255;
+			dst_2.at<uchar>(i_cen + i, j_cen) = 0;
 
 		}
 		for(int j = -320; j < 320; j++)
 		{
-			dst_2.at<uchar>(i_cen , j_cen + j) = 255;
+			dst_2.at<uchar>(i_cen , j_cen + j) = 0;
 		}
 		Mat img = dst_2.clone();
 
