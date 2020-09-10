@@ -257,8 +257,13 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
-		imshow("Frame",imgdata.image);
-		waitKey(5);
+		while(true)
+		{	
+			imshow("Frame",imgdata.image);
+			if(cvWaitKey(10) & 0xff == ord('q'))
+				break;
+		}
+		cvDestroyAllWindows();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 

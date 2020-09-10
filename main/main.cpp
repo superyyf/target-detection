@@ -186,7 +186,7 @@ static void hello(void)
 #define AOI_Y 128
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
-#define AREA_THRESHOLD  50
+#define AREA_THRESHOLD  10
 
 bool end_flag = false;
 void sign_handle(int sign)
@@ -408,7 +408,7 @@ void *send_data_thread(Queue<TargetData> *t)
 	struct sockaddr_in addrSrv;
 	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！
 	addrSrv.sin_family = AF_INET;
-	addrSrv.sin_port = htons(10011);//重要！！！端口编号10011
+	addrSrv.sin_port = htons(10016);//重要！！！端口编号10011
 	struct timeval start_3, end_3;
 	while(true){
 		gettimeofday(&start_3, NULL);
