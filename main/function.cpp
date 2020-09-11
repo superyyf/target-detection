@@ -75,7 +75,7 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
 	Mat imgFront,imglabel, stats, centroids;
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	absdiff(img, background, imgFront);
-	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
+	threshold(imgFront, imgFront, 50, 255, CV_THRESH_BINARY);
 	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
 	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
 	vector<DetectInfo> detectinfos(count);

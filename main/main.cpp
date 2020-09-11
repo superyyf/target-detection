@@ -381,7 +381,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		p1->output->push(move(targetdata));//将目标信息放入队列
 		//背景更新
 		printf("************************frame_num = %d***********************\n",frame_num);
-		if ((frame_num % 50 == 0 && x1 == 0) | detect_num >= 50 )//背景更新条件：原则上50帧更新一次，有目标不更新，连续50帧出现目标更新
+		if ((frame_num % 50 == 0 && x1 == 0) || detect_num >= 50 )//背景更新条件：原则上50帧更新一次，有目标不更新，连续50帧出现目标更新
 		{
 			img_back = image_pro.clone();
 			printf("****************************背景更新************************\n");

@@ -182,8 +182,8 @@ static void hello(void)
 #define XDIM 640 //width
 #define YDIM 512 //height
 #define COLORS 1
-#define AOI_X 160
-#define AOI_Y 128
+#define AOI_X 63
+#define AOI_Y 133
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
@@ -302,6 +302,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	char postfix[] = ".png";
 	char filename[255];
 	int target_count = 0;
+	int detect_num = 0;
 
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
@@ -339,6 +340,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		if(detect_infos.size())
 		{
 			target_count++;
+			detect_num++;
 			x1 = AOI_X + (unsigned short)detect_infos[0].x;
 			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
 			printf("Target : [ %d , %d ]\n", x1, y1);
@@ -365,6 +367,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		{
 			x1 = 0;
 			y1 = 0;
+			detect_num = 0;
 		}
 		
 		targetdata.x = x1;
@@ -373,7 +376,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		p1->output->push(move(targetdata));
 		//背景更新
 		printf("************************frame_num = %d***********************\n",frame_num);
-		if (frame_num % 50 == 0 && x1 == 0)
+		if ((frame_num % 50 == 0 && x1 == 0) || (detect_num >= 20) )
 		{
 			img_back = image_pro.clone();
 			printf("****************************背景更新************************\n");
@@ -398,7 +401,7 @@ void *send_data_thread(Queue<TargetData> *t)
 		return NULL;
 	}
 	struct sockaddr_in addrSrv;
-	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.13");//ip地址重要！！！Srv IP is "192.168.1.10"
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10016);//重要！！！端口编号10011
 	struct timeval start_3, end_3;
