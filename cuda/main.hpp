@@ -68,7 +68,7 @@ void get_remote_time(struct SendData *send);//时间换算
 vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80);//目标检测
 
 
-Point cuda_detection(Mat img, int frame_num, int area_threshold = 80);//cuda
+Point cuda_detection(Mat img, int area_threshold = 80);//cuda
 
 int UART0_Recv(int fd, char *rcv_buf,int data_len);//串口接收    
 

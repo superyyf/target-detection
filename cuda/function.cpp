@@ -23,6 +23,7 @@ cuda::GpuMat d_front;
 cuda::GpuMat d_back;
 
 int update_flag = 0;
+int continuous_num = 0;
 
 struct timespec init_time_remote;
 struct timespec init_time_local;
@@ -100,7 +101,7 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
 }
 
 
-Point cuda_detection(Mat img, int frame_num, int AREA_THRESHOLD){
+Point cuda_detection(Mat img, int AREA_THRESHOLD){
         if(update_flag == 0)
         {
                 d_back.upload(img.clone());
@@ -132,17 +133,20 @@ Point cuda_detection(Mat img, int frame_num, int AREA_THRESHOLD){
         }
         unsigned int x1 = 0;
         unsigned int y1 = 0;
-        if(detectinfos.size())
+
+        if(detectinfos.size() && continuous_num <= 50)
         {
                 x1 = (unsigned short)detectinfos[0].x;
                 y1 = (unsigned short)detectinfos[0].y;
                 printf("Target : [ %d , %d ]\n", x1, y1);
+		continuous_num++;
         }
         else
         {
-                d_back = d_img.clone();
-                //cuda::addWeighted(d_back, (frame_num-1)/frame_num, d_img, 1/frame_num, 0, d_back);
+                //d_back = d_img.clone();
+                cuda::addWeighted(d_back, 0.5, d_img, 0.5, 0, d_back);
                 printf("\n-----------------背景更新-----------------\n");
+		continuous_num = 0;
         }
 
         Point point(x1,y1);

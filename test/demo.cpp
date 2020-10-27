@@ -58,19 +58,19 @@ struct TargetData{
 int main(){
 
 	int frame_num = 0;
-	char prefix[] = "/home/nvidia/No6/frame_";
+	char prefix[] = "/media/nvidia/Elements SE/太原实验数据/8bits/第六发处理完(6.2km)/frame_";
 	char postfix[] = ".png";
 	char filename[255];
 
 
 	Scalar color(0, 0, 255);
 	struct timeval start, end;
-	for(int k = 4049; k<=4296; k++)
+	for(int k = 4000; k<=4999; k++)
 	{
 		frame_num++;
 		sprintf(filename, "%s%d%s", prefix, k, postfix);	
 		Mat src  = imread(filename,IMREAD_GRAYSCALE);//原始图像
-		if(!src.data)
+		if(!src.data || k <= 3)
 		{
 			continue;
 		}
@@ -78,7 +78,7 @@ int main(){
 		//目标检测
 		
 		gettimeofday(&start, NULL);
-		Point point = cuda_detection(src, frame_num, AREA_THRESHOLD);
+		Point point = cuda_detection(src, AREA_THRESHOLD);
 		gettimeofday(&end, NULL);
 		
 		printf("time: %fms \n",(double)(end.tv_usec - start.tv_usec)/1000);
@@ -90,7 +90,7 @@ int main(){
 		}	
 
 		imshow("Frame", src);
-		cvWaitKey(20);		
+		cvWaitKey(10);		
 		
 	}
 	

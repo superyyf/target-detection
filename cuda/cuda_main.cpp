@@ -221,8 +221,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
-	struct timeval start_1, end_1, start_p;
-	gettimeofday(&start_1, NULL);
+	struct timeval  end_1, start_p;
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
 		gettimeofday(&start_p, NULL);
@@ -298,7 +297,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
                 }
 
 		gettimeofday(&end_1, NULL);
-		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
+		printf("Image Enhance = %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000));
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -341,7 +340,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		TargetData targetdata;
 
 		//目标检测
- 		Point point = cuda_detection(image_pro, frame_num, AREA_THRESHOLD);
+ 		Point point = cuda_detection(image_pro, AREA_THRESHOLD);
 
 		if(point.x != 0)
 		{
