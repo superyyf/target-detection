@@ -19,7 +19,6 @@
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
 
-
 //宏定义    
 #define FALSE  -1    
 #define TRUE   0
@@ -67,6 +66,7 @@ void init_time(const struct ReceiveInfo *recv);//初始化时间
 void get_remote_time(struct SendData *send);//时间换算
 
 vector<DetectInfo> detection(Mat background, Mat img, int area_threshold = 80);//目标检测
+
 
 Point cuda_detection(Mat img, int frame_num, int area_threshold = 80);//cuda
 

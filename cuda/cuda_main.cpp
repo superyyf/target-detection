@@ -1,3 +1,5 @@
+#if !defined(FORMAT) && !defined(FORMATFILE)
+
 #define FORMATFILE	"/usr/local/xcap/data/ddd.fmt"	  // using format file saved by XCAP
 #endif
 
@@ -180,16 +182,16 @@ static void hello(void)
 #define XDIM 640 //width
 #define YDIM 512 //height
 #define COLORS 1
-#define AOI_X 160
-#define AOI_Y 128
+#define AOI_X 63
+#define AOI_Y 133
 #define AOI_WIDTH 320
 #define AOI_HIGH 256
-#define AREA_THRESHOLD  10
+#define AREA_THRESHOLD  50
 
 bool end_flag = false;
 void sign_handle(int sign)
 {
-	end_flag = true;
+        end_flag = true;
 }
 
 
@@ -238,7 +240,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	//---------------------------16bits 图像直方图均衡化----------------------------------//
 
 		ushort *p_1 = NULL;
-		if (FrameNum % 80 == 0)//每80帧更新一次映射关系
+		if (FrameNum % 80 == 0)//每50帧更新一次映射关系
 		{
 			//存储直方图统计结果的数组
 			unsigned int hist[16384] = { 0 };
@@ -265,18 +267,18 @@ void *img_enhance_thread(Queue<ImageData> *q)
 			printf("**************************映射关系更新**********************\n");
 		}
 		
-		Mat dst_2(256, 320, CV_8UC1);
+		Mat dst_2( 512, 640, CV_8UC1);
 		uchar * p_2 = NULL;
         	//uchar img_con[512*640];
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < 512; i++)
 		{
 			//获取第i行像素数组首指针
 			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i+AOI_Y);
+			p_1 = src.ptr<ushort>(i);
 			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
-			for (int j = 0; j < 320; j++)
+			for (int j = 0; j < 640; j++)
 			{
-				p_2[j] = transf_fun[p_1[j+AOI_X]];
+				p_2[j] = transf_fun[p_1[j]];
                         	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
@@ -290,10 +292,10 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 
-		if(end_flag)//信号标志位
-		{
-			break;
-		}
+                if(end_flag)//信号标志位
+                {
+                        break;
+                }
 
 		gettimeofday(&end_1, NULL);
 		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
@@ -308,27 +310,26 @@ void *img_enhance_thread(Queue<ImageData> *q)
 
 void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
+	/*
 	char prefix[] = "/home/nvidia/pic/target_";
 	char postfix[] = ".png";
 	char filename[255];
-	int target_count = 0;//总目标计数
-	int detect_num = 0;//连续目标计数
-
-	unsigned short x1 = 0;//目标坐标
+	int target_count = 0;
+	int detect_num = 0;
+	*/
+	unsigned short x1 = 0;
 	unsigned short y1 = 0;
-	bool update_flag = true;//背景初始化标志位
-	time_t timefinal;
-	unsigned short time_ms;
-	struct timeval start_2, end_2, time_end;
-	Mat img_back(256, 320, CV_8UC1);
+
+	struct timeval start_2, end_2, time_target;
+	struct tm* tm_target;
 	while(true)
 	{
 
 		unique_ptr<ImageData> imgdata;
-		imgdata = p1->input->pop();//从队列中取出数据
+		imgdata = p1->input->pop();
 
 		gettimeofday(&start_2, NULL);
-		if(imgdata == NULL)//线程退出条件
+		if(imgdata == NULL)
 		{
 			p1->output->end();
 			break;
@@ -336,54 +337,36 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		Mat image_pro = imgdata->image;
 		int frame_num = imgdata->frame_num;
 		 
-		//背景初始化
-		if(update_flag)
-		{
-			img_back = image_pro.clone();
-			printf("\n--------------------------------------背景初始化-----------------------------\n");
-			update_flag = false;
-		}
 
 		TargetData targetdata;
 
 		//目标检测
-		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
-		if(detect_infos.size())//有目标
+ 		Point point = cuda_detection(image_pro, frame_num, AREA_THRESHOLD);
+
+		if(point.x != 0)
 		{
-			target_count++;
-			detect_num++;
-			x1 = AOI_X + (unsigned short)detect_infos[0].x;
-			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
-			printf("Target : [ %d , %d ]\n", x1, y1);
-			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			imwrite(filename, image_pro);//保存带目标图像
-			SendData sendata;
-			get_remote_time(&sendata);
-			targetdata.t_h = sendata.t_h;
-			targetdata.t_m = sendata.t_m;
-			targetdata.t_s = sendata.t_s;
-			targetdata.t_ms = sendata.t_ms;
+			x1 = point.x;
+			y1 = point.y;	
+			gettimeofday(&time_target, NULL);
+		        tm_target = localtime(&time_target.tv_sec);
+			targetdata.t_h = tm_target->tm_hour;
+			targetdata.t_m = tm_target->tm_min;
+			targetdata.t_s = tm_target->tm_sec;
+			targetdata.t_ms = time_target.tv_usec/1000;
+
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
-		else//无目标
+		else
 		{
 			x1 = 0;
 			y1 = 0;
-			detect_num = 0;
 		}
 		
 		targetdata.x = x1;
 		targetdata.y = y1;
 		targetdata.frame_num = frame_num;
-		p1->output->push(move(targetdata));//将目标信息放入队列
-		//背景更新
-		printf("************************frame_num = %d***********************\n",frame_num);
-		if ((frame_num % 50 == 0 && x1 == 0) || detect_num >= 50 )//背景更新条件：原则上50帧更新一次，有目标不更新，连续50帧出现目标更新
-		{
-			img_back = image_pro.clone();
-			printf("****************************背景更新************************\n");
-		}
+		p1->output->push(move(targetdata));
 		
 		gettimeofday(&end_2, NULL);
 		printf("--------------------Image Process = %fms-----------------------------------\n", (double)(end_2.tv_usec - start_2.tv_usec)/1000);
@@ -404,20 +387,20 @@ void *send_data_thread(Queue<TargetData> *t)
 		return NULL;
 	}
 	struct sockaddr_in addrSrv;
-	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.13");//ip地址重要！！！Srv IP is "192.168.1.10"
 	addrSrv.sin_family = AF_INET;
 	addrSrv.sin_port = htons(10016);//重要！！！端口编号10011
 	struct timeval start_3, end_3;
 	while(true){
 		gettimeofday(&start_3, NULL);
-		unique_ptr<TargetData> targetdata;//从队列中取出目标信息
+		unique_ptr<TargetData> targetdata;
 		targetdata = t->pop();
 		
-		if(targetdata == NULL){//线程推出条件
+		if(targetdata == NULL){
 			break;
 		}
 
-		if(targetdata->x != 0){//有目标则发送给上位机
+		if(targetdata->x != 0){
 			SendInfo sendinfos;
 			sendinfos.f_num = targetdata->frame_num;
 			sendinfos.t_h = targetdata->t_h;
@@ -460,13 +443,13 @@ int main(void)
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
 
-	set_system_time();//北斗对时
+	//set_system_time();
+        struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
+        signinfo.sa_handler = sign_handle;
+        signinfo.sa_flags = SA_RESETHAND;
+        sigemptyset(&signinfo.sa_mask);
+        sigaction(SIGINT, &signinfo, NULL);
 
-	struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
-	signinfo.sa_handler = sign_handle;
-	signinfo.sa_flags = SA_RESETHAND;
-	sigemptyset(&signinfo.sa_mask);
-	sigaction(SIGINT, &signinfo, NULL);
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
@@ -482,7 +465,7 @@ int main(void)
 	pthread_join(t3, NULL);
 
 	int fd1 = serialport_inti();//初始化串口
-	close_video_flow(fd1);//关闭视频流
+	close_video_flow(fd1);
 	return 0;	
 }
 

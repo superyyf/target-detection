@@ -21,7 +21,7 @@ using namespace cv;
 cuda::GpuMat d_img;
 cuda::GpuMat d_front;
 cuda::GpuMat d_back;
- 
+
 int update_flag = 0;
 
 struct timespec init_time_remote;
@@ -80,7 +80,7 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
 	Mat imgFront,imglabel, stats, centroids;
 	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
 	absdiff(img, background, imgFront);
-	threshold(imgFront, imgFront, 70, 255, CV_THRESH_BINARY);
+	threshold(imgFront, imgFront, 50, 255, CV_THRESH_BINARY);
 	morphologyEx(imgFront, imgFront, CV_MOP_OPEN, element); //消除孤立的点
 	int count = connectedComponentsWithStats(imgFront, imglabel, stats, centroids, 8);
 	vector<DetectInfo> detectinfos(count);
@@ -99,56 +99,57 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
 	return detectinfos;
 }
 
+
 Point cuda_detection(Mat img, int frame_num, int AREA_THRESHOLD){
-	if(update_flag == 0)
+        if(update_flag == 0)
         {
-        	d_back.upload(img.clone());
+                d_back.upload(img.clone());
                 printf("\n--------------------------------------背景初始化-----------------------------\n");
                 update_flag = 1;
-        }
-			
-	d_img.upload(img);
-	cuda::absdiff(d_img, d_back, d_front);
-	cuda::threshold(d_front, d_front, 70, 255, CV_THRESH_BINARY);
-	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-	auto morph_filter = cuda::createMorphologyFilter(MORPH_OPEN, d_front.type(),element); //消除孤立的点
-	morph_filter->apply(d_front, d_front);
-	Mat img_front, imglabel, stats, centroids;
-	d_front.download(img_front);
+        }   
+                            
+        d_img.upload(img);
+        cuda::absdiff(d_img, d_back, d_front);
+        cuda::threshold(d_front, d_front, 70, 255, CV_THRESH_BINARY);
+        Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+        auto morph_filter = cuda::createMorphologyFilter(MORPH_OPEN, d_front.type(),element); //消除孤立的点
+        morph_filter->apply(d_front, d_front);
+        Mat img_front, imglabel, stats, centroids;
+        d_front.download(img_front);
         int count = connectedComponentsWithStats(img_front, imglabel, stats, centroids, 8);
         vector<DetectInfo> detectinfos(count);
         for(int i = 1; i != count; ++i){
-        	detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
-                detectinfos[i].x = centroids.at<double>(i, 0);
-                detectinfos[i].y = centroids.at<double>(i, 1);
+                detectinfos[i].area = stats.at<int>(i, CC_STAT_AREA);
+                detectinfos[i].x = centroids.at<double>(i, 0); 
+                detectinfos[i].y = centroids.at<double>(i, 1); 
         }
         sort(detectinfos.begin(), detectinfos.end(), std::greater<DetectInfo>());
         for (int i = 0; i < count; ++i) {
-        	if (detectinfos[i].area < AREA_THRESHOLD) {
-                	detectinfos.resize(i);
+                if (detectinfos[i].area < AREA_THRESHOLD) {
+                        detectinfos.resize(i);
                         break;
                 }
         }
-	unsigned int x1 = 0;
-	unsigned int y1 = 0;
-
-	if(detectinfos.size())
+        unsigned int x1 = 0;
+        unsigned int y1 = 0;
+        if(detectinfos.size())
         {
-        	x1 = (unsigned short)detectinfos[0].x;
+                x1 = (unsigned short)detectinfos[0].x;
                 y1 = (unsigned short)detectinfos[0].y;
                 printf("Target : [ %d , %d ]\n", x1, y1);
         }
         else
         {
-		d_back = d_img.clone();
-		//cuda::addWeighted(d_back, (frame_num-1)/frame_num, d_img, 1/frame_num, 0, d_back);
-		printf("\n-----------------背景更新-----------------\n");
+                d_back = d_img.clone();
+                //cuda::addWeighted(d_back, (frame_num-1)/frame_num, d_img, 1/frame_num, 0, d_back);
+                printf("\n-----------------背景更新-----------------\n");
         }
 
-	Point point(x1,y1);
+        Point point(x1,y1);
 
-	return point;
+        return point;
 }
+
 
 /*******************************************************************  
     * 名称：            UART0_Recv  

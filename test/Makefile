@@ -17,3 +17,5 @@ entrewindow: entrewindow.cpp main.hpp function.cpp
 	g++ entrewindow.cpp function.cpp /usr/local/xclib/lib/xclib_aarch64.so -I /usr/local/xclib/inc/ -I /usr/local/include/opencv -I /usr/local/include/opencv2 -lm /usr/local/lib/libopencv_* -lm //lib/aarch64-linux-gnu/libpthread.so.0 -o entrewindow
 planb: plan_b.cpp main.hpp function.cpp	
 	g++ plan_b.cpp function.cpp /usr/local/xclib/lib/xclib_aarch64.so -I /usr/local/xclib/inc/ -I /usr/local/include/opencv -I /usr/local/include/opencv2 -lm /usr/local/lib/libopencv_* -lm //lib/aarch64-linux-gnu/libpthread.so.0 -o planb
+demo: demo.cpp main.hpp function.cpp
+	g++ demo.cpp function.cpp /usr/local/xclib/lib/xclib_aarch64.so -I /usr/local/xclib/inc/ -I /usr/local/include/opencv -I /usr/local/include/opencv2 -lm /usr/local/lib/libopencv_* -lm //lib/aarch64-linux-gnu/libpthread.so.0 --std=c++11 -o demo
