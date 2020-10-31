@@ -143,8 +143,8 @@ Point cuda_detection(Mat img, int AREA_THRESHOLD){
         }
         else
         {
-                //d_back = d_img.clone();
-                cuda::addWeighted(d_back, 0.5, d_img, 0.5, 0, d_back);
+                d_back = d_img.clone();
+                //cuda::addWeighted(d_back, 0.5, d_img, 0.5, 0, d_back);
                 printf("\n-----------------背景更新-----------------\n");
 		continuous_num = 0;
         }
@@ -153,7 +153,6 @@ Point cuda_detection(Mat img, int AREA_THRESHOLD){
 
         return point;
 }
-
 
 /*******************************************************************  
     * 名称：            UART0_Recv  

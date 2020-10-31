@@ -290,7 +290,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 
-		usleep(5000);
+		imshow("Frame", dst_2);
+		cvWaitKey(5);
 
                 if(end_flag)//信号标志位
                 {
@@ -362,7 +363,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			targetdata.t_s = timedata.t_s;
 			targetdata.t_ms = timedata.t_ms;
 
-			drawMarker(image_pro, point, color);
+			//drawMarker(image_pro, point, color);
 
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
@@ -378,8 +379,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.frame_num = frame_num;
 		p1->output->push(move(targetdata));
 
-		imshow("Frame",image_pro);
-		cvWaitKey(1);
+		//imshow("Frame",image_pro);
+		//cvWaitKey(1);
 		
 		if(gpu_load_flag == false){
 			gpu_load_flag = true;

@@ -120,7 +120,8 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 		
-		usleep(5000);
+		imshow("Frame", src);
+		cvWaitKey(4);
                 if(end_flag)//信号标志位
                 {
                         break;
@@ -193,7 +194,7 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			targetdata.t_s = timedata.t_s;
 			targetdata.t_ms = timedata.t_ms;
 
-			drawMarker(image_pro,point,color);
+			//drawMarker(image_pro,point,color);
 
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
@@ -204,8 +205,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			y1 = 0;
 		}
 
-		imshow("Frame", image_pro);
-		cvWaitKey(1);		
+		//imshow("Frame", image_pro);
+		//cvWaitKey(1);		
 
 		if(gpu_load_flag == false){
 			gpu_load_flag = true;
@@ -235,9 +236,9 @@ void *send_data_thread(Queue<TargetData> *t)
 		return NULL;
 	}
 	struct sockaddr_in addrSrv;
-	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.13");//ip地址重要！！！Srv IP is "192.168.1.10"
+	addrSrv.sin_addr.s_addr = inet_addr("192.168.1.11");//ip地址重要！！！Srv IP is "192.168.1.10"
 	addrSrv.sin_family = AF_INET;
-	addrSrv.sin_port = htons(10016);//重要！！！端口编号10011
+	addrSrv.sin_port = htons(10015);//重要！！！端口编号10011
 	struct timeval start_3, end_3;
 	while(true){
 		gettimeofday(&start_3, NULL);

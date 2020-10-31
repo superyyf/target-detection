@@ -101,10 +101,10 @@ vector<DetectInfo> detection(Mat background, Mat img, int area_threshold) {
 }
 
 
-Point cuda_detection(Mat img, int AREA_THRESHOLD){
+Point cuda_detection(Mat img, int frame_num, int AREA_THRESHOLD){
         if(update_flag == 0)
         {
-                d_back.upload(img.clone());
+                d_back.upload(img);
                 printf("\n--------------------------------------背景初始化-----------------------------\n");
                 update_flag = 1;
         }   
@@ -143,10 +143,13 @@ Point cuda_detection(Mat img, int AREA_THRESHOLD){
         }
         else
         {
-                //d_back = d_img.clone();
-                cuda::addWeighted(d_back, 0.5, d_img, 0.5, 0, d_back);
-                printf("\n-----------------背景更新-----------------\n");
-		continuous_num = 0;
+		//if(frame_num % 50 == 0 || continuous_num > 50)
+		//{
+                	//d_back = d_img.clone();
+                	cuda::addWeighted(d_back, 0.5, d_img, 0.5, 0, d_back);
+                	printf("\n-----------------背景更新-----------------\n");
+			continuous_num = 0;
+		//}
         }
 
         Point point(x1,y1);
