@@ -189,6 +189,7 @@ static void hello(void)
 #define AREA_THRESHOLD  50
 
 bool end_flag = false;
+bool gpu_load_flag = false;
 void sign_handle(int sign)
 {
         end_flag = true;
@@ -283,19 +284,23 @@ void *img_enhance_thread(Queue<ImageData> *q)
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		imshow("Frame",dst_2);
-		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
 
+		usleep(5000);
+
                 if(end_flag)//信号标志位
                 {
                         break;
                 }
 
+		while(!gpu_load_flag){
+			printf("Loading...\n");
+			sleep(1);
+		}
 		gettimeofday(&end_1, NULL);
 		printf("Image Enhance = %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000));
 	
@@ -318,7 +323,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 	*/
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
-
+	
+	Scalar color(0,0,255);
 	struct timeval start_2, end_2, time_target;
 	struct tm* tm_target;
 	while(true)
@@ -353,6 +359,8 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 			targetdata.t_s = tm_target->tm_sec;
 			targetdata.t_ms = time_target.tv_usec/1000;
 
+			drawMarker(image_pro, point, color);
+
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
 		}
@@ -366,6 +374,13 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		targetdata.y = y1;
 		targetdata.frame_num = frame_num;
 		p1->output->push(move(targetdata));
+
+		imshow("Frame",image_pro);
+		cvWaitKey(1);
+		
+		if(gpu_load_flag == false){
+			gpu_load_flag = true;
+		}
 		
 		gettimeofday(&end_2, NULL);
 		printf("--------------------Image Process = %fms-----------------------------------\n", (double)(end_2.tv_usec - start_2.tv_usec)/1000);

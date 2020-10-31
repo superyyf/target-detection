@@ -184,12 +184,14 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		{
 			x1 = point.x;
 			y1 = point.y;	
-			gettimeofday(&time_target, NULL);
-		        tm_target = localtime(&time_target.tv_sec);
-			targetdata.t_h = tm_target->tm_hour;
-			targetdata.t_m = tm_target->tm_min;
-			targetdata.t_s = tm_target->tm_sec;
-			targetdata.t_ms = time_target.tv_usec/1000;
+
+			SendData timedata;
+			get_remote_time(&timedata);
+
+			targetdata.t_h = timedata.t_h;
+			targetdata.t_m = timedata.t_m;
+			targetdata.t_s = timedata.t_s;
+			targetdata.t_ms = timedata.t_ms;
 
 			drawMarker(image_pro,point,color);
 
@@ -272,7 +274,8 @@ void *send_data_thread(Queue<TargetData> *t)
 int main(void)
 {
 	hello();
-	//set_system_time();
+	set_system_time();
+
         struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
         signinfo.sa_handler = sign_handle;
         signinfo.sa_flags = SA_RESETHAND;

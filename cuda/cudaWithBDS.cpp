@@ -188,6 +188,13 @@ static void hello(void)
 #define AOI_HIGH 256
 #define AREA_THRESHOLD  50
 
+bool end_flag = false;
+bool gpu_load_flag = false;
+void sign_handle(int sign)
+{
+        end_flag = true;
+}
+
 
 void *img_enhance_thread(Queue<ImageData> *q)
 {
@@ -215,8 +222,7 @@ void *img_enhance_thread(Queue<ImageData> *q)
 	pxd_goLive(UNITSMAP, 1);
 	pxd_readushort(UNITSMAP, 1, cx, cy, cx + XDIM, cy + YDIM, colorimage_buf1, sizeof(colorimage_buf1) / sizeof(ushort), "Grey");
 
-	struct timeval start_1, end_1, start_p;
-	gettimeofday(&start_1, NULL);
+	struct timeval  end_1, start_p;
 	while (pxd_goneLive(UNITSMAP, 0))//capture picture
 	{
 		gettimeofday(&start_p, NULL);
@@ -261,32 +267,42 @@ void *img_enhance_thread(Queue<ImageData> *q)
 			printf("**************************映射关系更新**********************\n");
 		}
 		
-		Mat dst_2(256, 320, CV_8UC1);
+		Mat dst_2( 512, 640, CV_8UC1);
 		uchar * p_2 = NULL;
         	//uchar img_con[512*640];
-		for (int i = 0; i < 256; i++)
+		for (int i = 0; i < 512; i++)
 		{
 			//获取第i行像素数组首指针
 			p_2 = dst_2.ptr<uchar>(i);
-			p_1 = src.ptr<ushort>(i+AOI_Y);
+			p_1 = src.ptr<ushort>(i);
 			//根据映射关系将原图像灰度替换成直方图均衡后的灰度
-			for (int j = 0; j < 320; j++)
+			for (int j = 0; j < 640; j++)
 			{
-				p_2[j] = transf_fun[p_1[j+AOI_X]];
+				p_2[j] = transf_fun[p_1[j]];
                         	//img_con[i*640+j] = transf_fun[p_1[j]];
 			}
 		}	
 		//将直方图均衡化结果dst_2复制给img，img进行网络传输。
 		//注意！！！考虑等号赋值条件与深拷贝 浅拷贝之间的关系
-		imshow("Frame",dst_2);
-		cvWaitKey(1);
 		FrameNum++;
 		ImageData imgdata;
 		imgdata.image = dst_2.clone();
 		imgdata.frame_num = FrameNum;
 		q->push(move(imgdata));
+
+		usleep(5000);
+
+                if(end_flag)//信号标志位
+                {
+                        break;
+                }
+
+		while(!gpu_load_flag){
+			printf("Loading...\n");
+			sleep(1);
+		}
 		gettimeofday(&end_1, NULL);
-		printf("Image Enhance = %fms / %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000), (double)((1000000*(end_1.tv_sec - start_1.tv_sec)+(end_1.tv_usec - start_1.tv_usec))/1000/FrameNum));
+		printf("Image Enhance = %fms-------------------------------------------------------\n", (double)((end_1.tv_usec - start_p.tv_usec)/1000));
 	
 	}
 	printf("\n------------------------------------结束图像增强线程-------------------------------\n");
@@ -298,18 +314,20 @@ void *img_enhance_thread(Queue<ImageData> *q)
 
 void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 {
+	/*
 	char prefix[] = "/home/nvidia/pic/target_";
 	char postfix[] = ".png";
 	char filename[255];
 	int target_count = 0;
 	int detect_num = 0;
-
+	*/
 	unsigned short x1 = 0;
 	unsigned short y1 = 0;
-	bool update_flag = true;
-	struct timeval start_2, end_2, time_end, time_target;
+
+	Scalar color(0,0,255);
+
+	struct timeval start_2, end_2, time_target;
 	struct tm* tm_target;
-	Mat img_back(256, 320, CV_8UC1);
 	while(true)
 	{
 
@@ -325,40 +343,26 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		Mat image_pro = imgdata->image;
 		int frame_num = imgdata->frame_num;
 		 
-		//背景初始化
-		if(update_flag)
-		{
-			img_back = image_pro.clone();
-			printf("\n--------------------------------------背景初始化-----------------------------\n");
-			update_flag = false;
-		}
 
 		TargetData targetdata;
 
 		//目标检测
-		vector<DetectInfo> detect_infos = detection(img_back, image_pro, AREA_THRESHOLD);
-		if(detect_infos.size())
+ 		Point point = cuda_detection(image_pro, AREA_THRESHOLD);
+
+		if(point.x != 0)
 		{
-			target_count++;
-			detect_num++;
-			x1 = AOI_X + (unsigned short)detect_infos[0].x;
-			y1 = AOI_Y + (unsigned short)detect_infos[0].y;
-			printf("Target : [ %d , %d ]\n", x1, y1);
-			sprintf(filename, "%s%d%s", prefix, target_count,postfix);
-			imwrite(filename, image_pro);
+			x1 = point.x;
+			y1 = point.y;	
+
+			SendData timedata;
+			get_remote_time(&timedata);
 			
-			gettimeofday(&time_target, NULL);
-		        tm_target = localtime(&time_target.tv_sec);
-			targetdata.t_h = tm_target->tm_hour;
-			targetdata.t_m = tm_target->tm_min;
-			targetdata.t_s = tm_target->tm_sec;
-			targetdata.t_ms = time_target.tv_usec/1000;
-			//SendData sendata;
-			//get_remote_time(&sendata);
-			//targetdata.t_h = sendata.t_h;
-			//targetdata.t_m = sendata.t_m;
-			//targetdata.t_s = sendata.t_s;
-			//targetdata.t_ms = sendata.t_ms;
+			targetdata.t_h = timedata.t_h;
+			targetdata.t_m = timedata.t_m;
+			targetdata.t_s = timedata.t_s;
+			targetdata.t_ms = timedata.t_ms;
+
+			drawMarker(image_pro, point, color);
 
 			printf("target_th = %d\ntarget_tm = %d\ntarget_ts = %d\ntarget_tms = %d\n", targetdata.t_h, targetdata.t_m, targetdata.t_s, targetdata.t_ms);
 			
@@ -367,19 +371,18 @@ void *image_process_thread(Pipe<ImageData, TargetData> *p1)
 		{
 			x1 = 0;
 			y1 = 0;
-			detect_num = 0;
 		}
 		
 		targetdata.x = x1;
 		targetdata.y = y1;
 		targetdata.frame_num = frame_num;
 		p1->output->push(move(targetdata));
-		//背景更新
-		printf("************************frame_num = %d***********************\n",frame_num);
-		if ((frame_num % 50 == 0 && x1 == 0) || (detect_num >= 20) )
-		{
-			img_back = image_pro.clone();
-			printf("****************************背景更新************************\n");
+
+		imshow("Frame",image_pro);
+		cvWaitKey(1);
+		
+		if(gpu_load_flag == false){
+			gpu_load_flag = true;
 		}
 		
 		gettimeofday(&end_2, NULL);
@@ -457,7 +460,13 @@ int main(void)
 	printf("bits per pixel = %d\n", pxd_imageCdim()*pxd_imageBdim());
 	
 
-	//set_system_time();
+	set_system_time();
+        struct sigaction signinfo;//信号处理：Ctr+C结束图像增强线程
+        signinfo.sa_handler = sign_handle;
+        signinfo.sa_flags = SA_RESETHAND;
+        sigemptyset(&signinfo.sa_mask);
+        sigaction(SIGINT, &signinfo, NULL);
+
 
 	Queue<ImageData> imagedata;
 	Queue<TargetData> targetdata;
